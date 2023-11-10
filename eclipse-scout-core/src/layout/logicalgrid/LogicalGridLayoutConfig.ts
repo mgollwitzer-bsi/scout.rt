@@ -7,7 +7,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-import {InitModelOf, LogicalGridLayout, ObjectOrModel} from '../../index';
+import {HtmlEnvironment, InitModelOf, LogicalGridLayout, ObjectOrModel, Widget} from '../../index';
 
 export interface LogicalGridLayoutConfigModel {
   /**
@@ -35,11 +35,13 @@ export interface LogicalGridLayoutConfigModel {
   minWidth?: number;
 }
 
+// TODO CGU write test that verify that custom options are preserved even if html env change. Also verify the logical grid invalidation is really not needed
+
 /**
  * Configures layouting hints for elements layouted by {@link LogicalGridLayout}.
  *
- * The configured hints only have an effect if theirs value is >=0.
- * Otherwise, the default values specified by CSS are applied (see {@link LogicalGridLayout._initDefaults}).
+ * The configured hints only have an effect if their value is >=0.
+ * Otherwise, the default values specified by CSS are applied (see {@link _readDefaults}).
  */
 export class LogicalGridLayoutConfig implements LogicalGridLayoutConfigModel {
   declare model: LogicalGridLayoutConfigModel;
@@ -49,29 +51,47 @@ export class LogicalGridLayoutConfig implements LogicalGridLayoutConfigModel {
   columnWidth: number;
   rowHeight: number;
   minWidth: number;
+  protected _defaults: InitModelOf<LogicalGridLayoutConfig>;
+  protected _options: InitModelOf<LogicalGridLayoutConfig>;
 
-  constructor(options?: InitModelOf<LogicalGridLayoutConfig>) {
+  constructor(options?: InitModelOf<LogicalGridLayoutConfig>, defaults?: InitModelOf<LogicalGridLayoutConfig>) {
+    this._options = this._prepareOptions(options || {});
+    this.setDefaults(defaults);
+  }
+
+  protected _prepareOptions(options?: InitModelOf<LogicalGridLayoutConfig>) {
+    let opts = $.extend({}, options);
     // -1 means use the UI defaults
-    options = options || {};
-    if (options.hgap > -1) {
-      this.hgap = options.hgap;
-    }
-    if (options.vgap > -1) {
-      this.vgap = options.vgap;
-    }
-    if (options.columnWidth > -1) {
-      this.columnWidth = options.columnWidth;
-    }
-    if (options.rowHeight > -1) {
-      this.rowHeight = options.rowHeight;
-    }
-    if (options.minWidth > -1) {
-      this.minWidth = options.minWidth;
-    }
+    opts.hgap = options.hgap > -1 ? options.hgap : undefined;
+    opts.vgap = options.vgap > -1 ? options.vgap : undefined;
+    opts.columnWidth = options.columnWidth > -1 ? options.columnWidth : undefined;
+    opts.rowHeight = options.rowHeight > -1 ? options.rowHeight : undefined;
+    opts.minWidth = options.minWidth > -1 ? options.minWidth : undefined;
+    return opts;
+  }
+
+  setDefaults(defaults?: InitModelOf<LogicalGridLayoutConfig>) {
+    this._defaults = $.extend({}, defaults);
+    this._initDefaults();
+  }
+
+  protected _initDefaults() {
+    $.extend(this, this._defaults, this._readDefaults(), this._options);
+  }
+
+  protected _readDefaults(): InitModelOf<LogicalGridLayoutConfig> {
+    let env = HtmlEnvironment.get();
+    return {
+      hgap: env.formColumnGap,
+      vgap: env.formRowGap,
+      columnWidth: env.formColumnWidth,
+      rowHeight: env.formRowHeight,
+      minWidth: 0
+    };
   }
 
   clone(): LogicalGridLayoutConfig {
-    return new LogicalGridLayoutConfig(this);
+    return new LogicalGridLayoutConfig(this._options, this._defaults);
   }
 
   applyToLayout(layout: LogicalGridLayout) {
@@ -101,5 +121,29 @@ export class LogicalGridLayoutConfig implements LogicalGridLayoutConfigModel {
       return layoutConfig;
     }
     return new LogicalGridLayoutConfig(layoutConfig);
+  }
+
+  static initHtmlEnvChangeHandler(widget: Widget, getter: () => LogicalGridLayoutConfig, setter: (config: LogicalGridLayoutConfig) => void) {
+    if (widget.initialized) {
+      return;
+    }
+    let handler = () => {
+      setter(getter()?.clone()); // Clone will read the new defaults and apply the custom options
+    };
+    HtmlEnvironment.get().on('propertyChange', handler);
+    widget.one('destroy', () => {
+      HtmlEnvironment.get().off('propertyChange', handler);
+    });
+  }
+
+  static prepareSmallHgapConfig(layoutConfig: ObjectOrModel<LogicalGridLayoutConfig>) {
+    if (!layoutConfig) {
+      layoutConfig = new LogicalGridLayoutConfig();
+    }
+    let realLayoutConfig = LogicalGridLayoutConfig.ensure(layoutConfig);
+    realLayoutConfig.setDefaults({
+      hgap: HtmlEnvironment.get().smallColumnGap
+    });
+    return realLayoutConfig;
   }
 }
