@@ -10,6 +10,7 @@
 import {Dimension, events, graphics, Point} from '@eclipse-scout/core';
 import $ from 'jquery';
 import {Rectangle} from '../layout/Rectangle';
+import {Widget} from '../widget/Widget';
 
 /**
  * Minimal distance in pixels for a "mouse move" action to take effect.
@@ -19,12 +20,12 @@ const MOUSE_MOVE_THRESHOLD = 7;
 
 // TODO CGU cleanup, remove all not essential
 // TODO CGU use Rectangle and Point, use bounds instead of offset with with and height
-export class MoveSupport {
+export class MoveSupport<TElem extends Widget> {
   protected _callback: any;
   protected _moveData: any;
   protected _animationDurationFactor: number;
   protected _maxCloneSize: number;
-  protected _mouseMoveHandler: (event: JQuery.MouseDownEvent) => void;
+  protected _mouseMoveHandler: (event: JQuery.MouseMoveEvent) => void;
   protected _mouseUpHandler: (event: JQuery.MouseUpEvent) => void;
 
   /**
@@ -43,36 +44,38 @@ export class MoveSupport {
     this._mouseUpHandler = this._onMouseUp.bind(this);
   }
 
-  /**
-   * @param {Event} event
-   * @param {Widget[]} elements
-   * @param {Widget} draggedElement
-   */
-  startMove(event, elements, draggedElement) {
+  startMove(event: JQuery.MouseDownEvent, elements: TElem[], draggedElement: TElem) {
     if (this._moveData) {
       // Do nothing, when dragging is already in progress. This can happen when the user leaves
       // the browser window (e.g. using Alt-Tab) while holding the mouse button pressed and
       // then returns and presses the mouse button again.
       return;
     }
-
     if (!event || !elements || !elements.length || !draggedElement || !draggedElement.$container) {
       return;
     }
-    let $window = draggedElement.$container.window();
-    let $elements = draggedElement.$container.parent();
-
-    // -----
 
     events.fixTouchEvent(event);
 
-    // Start move
+    this._initMoveData(event, elements, draggedElement);
+    $('iframe').addClass('dragging-in-progress');
+
+    // Prevent scrolling on touch devices (like "touch-action: none" but with better browser support).
+    // Theoretically, unwanted scrolling can be prevented by adding the CSS rule "touch-action: none"
+    // to the element. Unfortunately, not all devices support this (e.g. Apple Safari on iOS).
+    // Therefore, we always suppress the scrolling in JS. Because this also suppresses the 'click'
+    // event, click actions have to be triggered manually in the 'mouseup' handler.
+    event.preventDefault();
+  }
+
+  protected _initMoveData(event: JQuery.MouseDownEvent, elements: TElem[], draggedElement: TElem) {
+    let $window = draggedElement.$container.window();
+    let $elements = draggedElement.$container.parent();
     this._moveData = {};
     this._moveData.session = draggedElement.session;
     this._moveData.$window = $window;
     this._moveData.$container = $elements;
-    this._moveData.containerOffset = $elements.offset();
-    this._moveData.containerSize = graphics.size($elements, {
+    this._moveData.containerBounds = graphics.offsetBounds($elements, {
       includeMargin: true
     });
     this._moveData.containerOrigStyle = $elements.attr('style');
@@ -84,25 +87,13 @@ export class MoveSupport {
       .map((element, index) => {
         // Collect various information about each element. This allows us to retrieve positions later on without
         // needing to measure them each time the mouse cursor moves. We can also skip null checks for $element.
-        //
-        // - offset   = absolute position (relative to the window)
-        // - top/left = relative position (relative to the container)
-        //
         let $element = element.$container;
-        let offset = $element.offset();
-        let top = offset.top - this._moveData.containerOffset.top;
-        let left = offset.left - this._moveData.containerOffset.left;
-        // TODO CGU use _updateElementInfo
         let info = {
           element: element,
           $element: $element,
-          offset: offset,
-          top: top,
-          left: left,
-          height: $element.cssHeight(),
-          width: $element.cssWidth(),
           origStyle: $element.attr('style')
         };
+        this._updateElementInfo(info);
         if (element === draggedElement) {
           this._moveData.draggedElementInfo = info;
           this._moveData.$draggedElement = $element; // convenience (short for draggedElementInfo.$element)
@@ -110,9 +101,11 @@ export class MoveSupport {
         return info;
       });
 
+    // TODO CGU cursor stuff needed?
+
     this._moveData.startCursorPosition = new Point(
-      event.pageX - this._moveData.containerOffset.left,
-      event.pageY - this._moveData.containerOffset.top
+      event.pageX - this._moveData.containerBounds.x,
+      event.pageY - this._moveData.containerBounds.y
     );
     this._moveData.currentCursorPosition = this._moveData.startCursorPosition;
     // Compute distances from the cursor to the edges of the chart section
@@ -126,46 +119,28 @@ export class MoveSupport {
       this._moveData.top = this._moveData.elementInfos[0].top;
       this._moveData.left = this._moveData.elementInfos[0].left;
     }
-    this._moveData.vgap = 0;
-    if (this._moveData.elementInfos.length > 1) {
-      // Use margin between first and second chart section as vgap
-      let t1 = this._moveData.elementInfos[0];
-      let t2 = this._moveData.elementInfos[1];
-      this._moveData.vgap = t2.top - t1.height - t1.top;
-    }
-
-    // -----
 
     this._moveData.$window
       .off('mousemove touchmove', this._mouseMoveHandler)
       .off('mouseup touchend touchcancel', this._mouseUpHandler)
       .on('mousemove touchmove', this._mouseMoveHandler)
       .on('mouseup touchend touchcancel', this._mouseUpHandler);
-    $('iframe').addClass('dragging-in-progress');
-
-    // Prevent scrolling on touch devices (like "touch-action: none" but with better browser support).
-    // Theoretically, unwanted scrolling can be prevented by adding the CSS rule "touch-action: none"
-    // to the element. Unfortunately, not all devices support this (e.g. Apple Safari on iOS).
-    // Therefore, we always suppress the scrolling in JS. Because this also suppresses the 'click'
-    // event, click actions have to be triggered manually in the 'mouseup' handler.
-    event.preventDefault();
   }
 
   protected _updateElementInfo(elementInfo) {
-    $.extend(elementInfo, this._createElementInfo(elementInfo.$element));
-  }
-
-  protected _createElementInfo($element) {
+    // offset   = absolute position (relative to the window)
+    // top/left = relative position (relative to the container)
+    let $element = elementInfo.$element;
     let offset = $element.offset();
-    let top = offset.top - this._moveData.containerOffset.top;
-    let left = offset.left - this._moveData.containerOffset.left;
-    return {
+    let top = offset.top - this._moveData.containerBounds.y;
+    let left = offset.left - this._moveData.containerBounds.x;
+    $.extend(elementInfo, {
       offset: offset,
       top: top,
       left: left,
       height: $element.cssHeight(),
       width: $element.cssWidth()
-    };
+    });
   }
 
   protected _updateElementInfos() {
@@ -186,7 +161,7 @@ export class MoveSupport {
     this._moveData = null;
   }
 
-  _restoreStyles() {
+  protected _restoreStyles() {
     // Remove clone
     this._moveData.$clone && this._moveData.$clone.remove();
 
@@ -197,14 +172,14 @@ export class MoveSupport {
     this._moveData.$container.removeClass('dragging-element');
   }
 
-  _onMouseMove(event) {
+  protected _onMouseMove(event: JQuery.MouseMoveEvent) {
     events.fixTouchEvent(event);
 
     // Adjust relative values if the panel has been scrolled while dragging (e.g. using the mouse wheel)
     let containerOffset = this._moveData.$container.offset();
-    if (containerOffset.top !== this._moveData.containerOffset.top) {
-      let dy = containerOffset.top - this._moveData.containerOffset.top;
-      this._moveData.containerOffset.top += dy;
+    if (containerOffset.top !== this._moveData.containerBounds.y) {
+      let dy = containerOffset.top - this._moveData.containerBounds.y;
+      this._moveData.containerBounds.y += dy;
       if (this._moveData.cloneStartOffset) {
         this._moveData.cloneStartOffset.top += dy;
       }
@@ -216,12 +191,13 @@ export class MoveSupport {
     // -----
 
     this._moveData.currentCursorPosition = new Point(
-      event.pageX - this._moveData.containerOffset.left,
-      event.pageY - this._moveData.containerOffset.top
+      event.pageX - this._moveData.containerBounds.x,
+      event.pageY - this._moveData.containerBounds.y
     );
     let distance = new Point(
       this._moveData.currentCursorPosition.x - this._moveData.startCursorPosition.x,
-      this._moveData.currentCursorPosition.y - this._moveData.startCursorPosition.y);
+      this._moveData.currentCursorPosition.y - this._moveData.startCursorPosition.y
+    );
 
     // Ignore small mouse movements
     if (!this._moveData.moving) {
@@ -229,24 +205,7 @@ export class MoveSupport {
         return;
       }
       this._moveData.moving = true;
-
-      // TODO CGU why? margin 0?
-      // Change everything to absolute positions
-      this._moveData.$container
-        .addClass('dragging-element')
-        .cssHeight(this._moveData.containerSize.height);
-
-      this._moveData.elementInfos.forEach(info => {
-        info.$element
-          .css({
-            position: 'absolute',
-            margin: 0,
-            width: info.width,
-            height: info.height,
-            left: info.left,
-            top: info.top
-          });
-      });
+      this._onFirstMouseMove();
     }
 
     // -----
@@ -279,11 +238,7 @@ export class MoveSupport {
     });
 
     // Don't change chart order if the clone is outside the container area
-    // TODO CGU use use Rectangle.contains
-    if (this._moveData.cloneOffset.left + this._moveData.cloneSize.width < this._moveData.containerOffset.left ||
-      this._moveData.cloneOffset.top + this._moveData.cloneSize.height < this._moveData.containerOffset.top ||
-      this._moveData.cloneOffset.left > this._moveData.containerOffset.left + this._moveData.containerSize.width ||
-      this._moveData.cloneOffset.top > this._moveData.containerOffset.top + this._moveData.containerSize.height) {
+    if (!this._moveData.containerBounds.intersects(new Rectangle(this._moveData.cloneOffset.left, this._moveData.cloneOffset.top, this._moveData.cloneSize.width, this._moveData.cloneSize.height))) {
       return;
     }
 
@@ -362,7 +317,7 @@ export class MoveSupport {
     // this._moveData.elementInfos.forEach((info, index, arr) => {
     //   if (index >= affectedIndexFrom || index <= affectedIndexTo) {
     //     // Affected chart --> Update target position
-    //     info.offset.top = this._moveData.containerOffset.top + top;
+    //     info.offset.top = this._moveData.containerBounds.y + top;
     //     info.top = top;
     //     // Animate
     //     info.$element
@@ -375,6 +330,11 @@ export class MoveSupport {
     //   }
     //   top += info.height + this._moveData.vgap;
     // });
+  }
+
+  protected _onFirstMouseMove() {
+    this._moveData.$container
+      .addClass('dragging-element');
   }
 
   protected _append$Clone() {

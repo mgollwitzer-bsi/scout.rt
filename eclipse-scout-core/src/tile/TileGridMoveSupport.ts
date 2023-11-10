@@ -10,7 +10,7 @@
 
 import {arrays, Dimension, graphics, GridData, MoveSupport, Rectangle, scout, Tile, TileGrid} from '../index';
 
-export class TileGridMoveSupport extends MoveSupport {
+export class TileGridMoveSupport extends MoveSupport<Tile> {
   tileGrid: TileGrid;
   swappedTiles: Map<Tile, GridData>;
 

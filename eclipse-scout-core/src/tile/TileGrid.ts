@@ -123,7 +123,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
 
     this.defaultMenuTypes = [TileGrid.MenuType.EmptySpace];
 
-    this._tileMoveSupport = new TileGridMoveSupport(this._onTileMove.bind(this), this);
+    this._tileMoveSupport = new TileGridMoveSupport(null, this);
     this._filterMenusHandler = this._filterMenus.bind(this);
     this._renderViewPortAfterAttach = false;
     this._scrollParentScrollHandler = this._onScrollParentScroll.bind(this);
@@ -1032,65 +1032,8 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
   }
 
   protected _onDragTileMouseDown(event: JQuery.MouseDownEvent) {
-    let tile = scout.widget($(event.currentTarget));
+    let tile = scout.widget($(event.currentTarget)) as Tile;
     this._tileMoveSupport.startMove(event, this.tiles, tile);
-
-    // // TODO CGU move to separate file?
-    // if (this._moveData) {
-    //   return;
-    // }
-    // events.fixTouchEvent(event);
-    // if (event.which === 3) {
-    //   return;
-    // }
-    // let $tile = $(event.currentTarget);
-    // let tile = $tile.data('widget');
-    //
-    // // TODO CGU Necessary?
-    // // if (widget === this && events.isTouchEvent(event)) {
-    // //   // Scrolling -> use default behavior
-    // //   return;
-    // // }
-    // this._moveData = {
-    //   tile: tile
-    // };
-    //
-    // this.$container.window()
-    //   // .off('mousemove touchmove', this._mouseMoveHandler)
-    //   // .off('mouseup touchend touchcancel', this._mouseUpHandler)
-    //   .on('mousemove touchmove', this._dragTileMouseMoveHandler)
-    //   .one('mouseup touchend touchcancel', this._dragTileMouseUpHandler);
-    // // $('iframe').addClass('dragging-in-progress');
-  }
-
-  // protected _onDragTileMouseMove(event: JQuery.MouseMoveEvent) {
-  //   events.fixTouchEvent(event);
-  //
-  //   if (!this._moveData.$clone) {
-  //     this._moveData.$clone = this._moveData.tile.$container.clone()
-  //       .addClass('dragging clone')
-  //       .removeAttr('data-id')
-  //       .css('position', 'fixed')
-  //       .appendTo(this.session.$entryPoint);
-  //
-  //     this._moveData.tile.$container.addClass('dragged');
-  //   }
-  // }
-  //
-  // protected _onDragTileMouseUp(event: JQuery.MouseUpEvent) {
-  //   this.$container.window()
-  //     .off('mousemove touchmove', this._dragTileMouseMoveHandler)
-  //     .off('mouseup touchend touchcancel', this._dragTileMouseUpHandler);
-  //   // $('iframe').removeClass('dragging-in-progress');
-  //
-  //   events.fixTouchEvent(event);
-  //
-  //
-  //   this._moveData = null;
-  // }
-
-  protected _onTileMove(newTiles: Tile[]) {
-
   }
 
   protected _onTileMouseDown(event: JQuery.MouseDownEvent): boolean {
