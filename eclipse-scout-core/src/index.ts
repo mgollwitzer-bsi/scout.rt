@@ -71,6 +71,7 @@ export * from './util/Device';
 export * from './util/DoubleClickSupport';
 export * from './util/DragAndDropHandler';
 export * from './util/dragAndDrop';
+export * from './util/MoveSupport';
 export * from './util/fonts';
 export * from './util/icons';
 export * from './util/inspector';

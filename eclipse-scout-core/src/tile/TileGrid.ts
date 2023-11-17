@@ -14,6 +14,7 @@ import {
   TileGridSelectLastKeyStroke, TileGridSelectLeftKeyStroke, TileGridSelectRightKeyStroke, TileGridSelectUpKeyStroke, TileTextFilter, UpdateFilteredElementsOptions, VirtualScrolling, Widget
 } from '../index';
 import $ from 'jquery';
+import {TileGridMoveSupport} from './TileGridMoveSupport';
 
 /**
  * Only select top-level tile elements. Do not select elements with a 'tile' class deeper in the tree.
@@ -31,6 +32,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
   animateTileInsertion: boolean;
   comparator: Comparator<TTile>;
   contextMenu: ContextMenuPopup;
+  draggable: boolean;
   empty: boolean;
   filters: Filter<TTile>[];
   filteredElementsDirty: boolean;
@@ -65,12 +67,17 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
   $filterFieldContainer: JQuery;
   $fillBefore: JQuery;
   $fillAfter: JQuery;
+  protected _moveData: any;
+  protected _tileMoveSupport: TileGridMoveSupport;
   protected _tiles: (TTile | PlaceholderTile)[];
   protected _filteredTiles: (TTile | PlaceholderTile)[];
   protected _doubleClickSupport: DoubleClickSupport;
   protected _filterMenusHandler: (menuItems: Menu[], destination: MenuDestinations) => Menu[];
   protected _renderViewPortAfterAttach: boolean;
   protected _scrollParentScrollHandler: (event: JQuery.ScrollEvent) => void;
+  protected _dragTileMouseDownHandler: (event: JQuery.MouseDownEvent) => void;
+  protected _dragTileMouseMoveHandler: (event: JQuery.MouseMoveEvent) => void;
+  protected _dragTileMouseUpHandler: (event: JQuery.MouseUpEvent) => void;
 
   constructor() {
     super();
@@ -78,6 +85,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
     this.animateTileInsertion = true;
     this.comparator = null;
     this.contextMenu = null;
+    this.draggable = false;
     this._doubleClickSupport = new DoubleClickSupport();
     this.empty = false;
     this.filters = [];
@@ -115,9 +123,11 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
 
     this.defaultMenuTypes = [TileGrid.MenuType.EmptySpace];
 
+    this._tileMoveSupport = new TileGridMoveSupport(this._onTileMove.bind(this), this);
     this._filterMenusHandler = this._filterMenus.bind(this);
     this._renderViewPortAfterAttach = false;
     this._scrollParentScrollHandler = this._onScrollParentScroll.bind(this);
+    this._dragTileMouseDownHandler = this._onDragTileMouseDown.bind(this);
     this._addWidgetProperties(['tiles', 'selectedTiles', 'menus']);
     this._addPreserveOnPropertyChangeProperties(['selectedTiles']);
     this._addComputedProperties(['tiles', 'filteredTiles']);
@@ -223,6 +233,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
     this._renderSelectable();
     this._renderEmpty();
     this._renderTextFilterEnabled();
+    this._renderDraggable();
   }
 
   protected override _remove() {
@@ -231,6 +242,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
     this.filterSupport.remove();
     this.viewRangeRendered = new Range(0, 0);
     this._updateVirtualScrollable();
+    this._tileMoveSupport.cancelMove();
     super._remove();
   }
 
@@ -1006,6 +1018,76 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
   /** @see TileGridModel.wrappable */
   setWrappable(wrappable: boolean) {
     this.setProperty('wrappable', wrappable);
+  }
+
+  protected _renderDraggable() {
+    if (this.draggable) {
+      this.$container.on('mousedown touchstart', TILE_SELECTOR, this._dragTileMouseDownHandler);
+    } else {
+      this.$container.off('mousedown touchstart', TILE_SELECTOR, this._dragTileMouseDownHandler);
+    }
+  }
+
+  protected _onDragTileMouseDown(event: JQuery.MouseDownEvent) {
+    let tile = scout.widget($(event.currentTarget));
+    this._tileMoveSupport.startMove(event, this.tiles, tile);
+
+    // // TODO CGU move to separate file?
+    // if (this._moveData) {
+    //   return;
+    // }
+    // events.fixTouchEvent(event);
+    // if (event.which === 3) {
+    //   return;
+    // }
+    // let $tile = $(event.currentTarget);
+    // let tile = $tile.data('widget');
+    //
+    // // TODO CGU Necessary?
+    // // if (widget === this && events.isTouchEvent(event)) {
+    // //   // Scrolling -> use default behavior
+    // //   return;
+    // // }
+    // this._moveData = {
+    //   tile: tile
+    // };
+    //
+    // this.$container.window()
+    //   // .off('mousemove touchmove', this._mouseMoveHandler)
+    //   // .off('mouseup touchend touchcancel', this._mouseUpHandler)
+    //   .on('mousemove touchmove', this._dragTileMouseMoveHandler)
+    //   .one('mouseup touchend touchcancel', this._dragTileMouseUpHandler);
+    // // $('iframe').addClass('dragging-in-progress');
+  }
+
+  // protected _onDragTileMouseMove(event: JQuery.MouseMoveEvent) {
+  //   events.fixTouchEvent(event);
+  //
+  //   if (!this._moveData.$clone) {
+  //     this._moveData.$clone = this._moveData.tile.$container.clone()
+  //       .addClass('dragging clone')
+  //       .removeAttr('data-id')
+  //       .css('position', 'fixed')
+  //       .appendTo(this.session.$entryPoint);
+  //
+  //     this._moveData.tile.$container.addClass('dragged');
+  //   }
+  // }
+  //
+  // protected _onDragTileMouseUp(event: JQuery.MouseUpEvent) {
+  //   this.$container.window()
+  //     .off('mousemove touchmove', this._dragTileMouseMoveHandler)
+  //     .off('mouseup touchend touchcancel', this._dragTileMouseUpHandler);
+  //   // $('iframe').removeClass('dragging-in-progress');
+  //
+  //   events.fixTouchEvent(event);
+  //
+  //
+  //   this._moveData = null;
+  // }
+
+  protected _onTileMove(newTiles: Tile[]) {
+
   }
 
   protected _onTileMouseDown(event: JQuery.MouseDownEvent): boolean {
