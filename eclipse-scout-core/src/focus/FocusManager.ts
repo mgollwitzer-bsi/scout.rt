@@ -413,34 +413,39 @@ export class FocusManager implements FocusManagerOptions {
    * Returns whether to accept a 'mousedown event'.
    */
   protected _acceptFocusChangeOnMouseDown($element: JQuery): boolean {
-    // 1. Prevent focus gain when glasspane is clicked.
-    //    Even if the glasspane is not focusable, this check is required because the glasspane might be contained in a focusable container
-    //    like table. Use case: outline modality with table-page as 'outlineContent'.
+    // Prevent focus gain when glasspane is clicked.
+    // Even if the glasspane is not focusable, this check is required because the glasspane might be contained in a focusable container
+    // like table. Use case: outline modality with table-page as 'outlineContent'.
     if ($element.hasClass('glasspane')) {
       return false;
     }
 
-    // 2. Prevent focus gain if covert by glasspane.
+    // Prevent focus gain if covert by glasspane.
     if (this.isElementCovertByGlassPane($element)) {
       return false;
     }
 
-    // 3. Prevent focus gain on elements excluded to gain focus by mouse, e.g. buttons.
+    // Prevent focus gain on elements excluded to gain focus by mouse, e.g. buttons.
     if (!focusUtils.isFocusableByMouse($element)) {
       return false;
     }
 
-    // 4. Allow focus gain on focusable elements.
+    // Allow focus gain on focusable elements.
     if ($element.is(':focusable')) {
       return true;
     }
 
-    // 5. Allow focus gain on elements with selectable content, e.g. the value of a label field.
+    // Allow focus gain on elements with selectable content, e.g. the value of a label field.
     if (focusUtils.isSelectableText($element)) {
       return true;
     }
 
-    // 6. Allow focus gain on elements with a focusable parent, e.g. when clicking on a row in a table.
+    // Don't prevent default action for draggable elements which is dragstart event
+    if (focusUtils.isDraggable($element)) {
+      return true;
+    }
+
+    // Allow focus gain on elements with a focusable parent, e.g. when clicking on a row in a table.
     if (focusUtils.containsParentFocusableByMouse($element, $element.entryPoint())) {
       return true;
     }

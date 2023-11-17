@@ -345,7 +345,7 @@
     }
   }
 
-  &.selected {
+  &.selected:not(.dragged) {
     #scout.double-drop-shadow(@spread1: 2px, @color1: @dashboard-tile-default-selected-border-color, @y2: 0px, @blur2: 0px);
 
     &.inverted {

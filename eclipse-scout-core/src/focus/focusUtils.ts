@@ -77,6 +77,14 @@ export const focusUtils = {
   },
 
   /**
+   * @returns true if the element or one of its parents is draggable.
+   */
+  isDraggable(element: HTMLElement | JQuery): boolean {
+    let $element = $.ensure(element);
+    return $element.attr('draggable') === 'true' || $element.parents('[draggable="true"]').length > 0;
+  },
+
+  /**
    * Returns true if the given HTML element is the active element in its own document, false otherwise
    * @param element
    */

@@ -7,12 +7,13 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-import {aria, BrowserField, Device, EnumObject, FormField, FormFieldLayout, PropertyChangeEvent, Tile, WidgetTile} from '../../index';
+import {BrowserField, Device, EnumObject, FormFieldLayout, PropertyChangeEvent, Tile, WidgetTile} from '../../index';
 
 export type FormFieldTileDisplayStyle = EnumObject<typeof FormFieldTile.DisplayStyle>;
 
 export class FormFieldTile extends WidgetTile {
   declare displayStyle: FormFieldTileDisplayStyle;
+  declare tileWidget: FormField;
 
   constructor() {
     super();
@@ -24,6 +25,11 @@ export class FormFieldTile extends WidgetTile {
     PLAIN: Tile.DisplayStyle.PLAIN,
     DASHBOARD: 'dashboard'
   }; // not const, can be extended
+
+  override init(model: InitModelOf<this>) {
+    super.init(model);
+    this._setDisplayStyle(this.displayStyle);
+  }
 
   protected override _renderProperties() {
     super._renderProperties();
@@ -38,6 +44,15 @@ export class FormFieldTile extends WidgetTile {
     }
     if (this.tileWidget && this.tileWidget.htmlComp && this.tileWidget.htmlComp.layout instanceof FormFieldLayout) {
       this.tileWidget.htmlComp.layout.statusWidth = 0;
+    }
+  }
+
+  protected _setDisplayStyle(displayStyle: FormFieldTileDisplayStyle) {
+    this._setProperty('displayStyle', this.displayStyle);
+    if (this.tileWidget && this.displayStyle === FormFieldTile.DisplayStyle.DASHBOARD) {
+      this.tileWidget.setLabelPosition(FormField.LabelPosition.TOP);
+      this.tileWidget.setMandatory(false);
+      this.tileWidget.setStatusVisible(false);
     }
   }
 
