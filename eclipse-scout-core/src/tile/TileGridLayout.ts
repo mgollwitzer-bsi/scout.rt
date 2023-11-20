@@ -218,7 +218,7 @@ export class TileGridLayout extends LogicalGridLayout {
 
     let bounds = graphics.cssBounds(tile.$container);
     let fromBounds = tile.$container.data('oldBounds');
-    if (tile instanceof PlaceholderTile && !tile.$container.data('was-layouted')) {
+    if (!tile.$container.data('was-layouted')) {
       // Placeholders may not have fromBounds because they are added while layouting
       // Just let them appear at the correct position
       fromBounds = bounds.clone();
@@ -282,7 +282,7 @@ export class TileGridLayout extends LogicalGridLayout {
 
     let promises = [];
     tile.$container
-      .addClass('moving')
+      .addClass('moving') // TODO CGU this won't be removed sometimes
       .cssLeftAnimated(fromBounds.x, bounds.x, {
         start: promise => {
           promises.push(promise);

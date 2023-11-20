@@ -16,6 +16,11 @@ export class TileGridMoveSupport extends MoveSupport {
   constructor(callback, tileGrid: TileGrid) {
     super(callback);
     this.tileGrid = tileGrid;
+    this.tileGrid.on('propertyChange:tiles', () => {
+      if (this._moveData) {
+        this._moveData.elements = this.tileGrid.tiles;
+      }
+    });
   }
 
   protected override _handleMove(event: JQuery.MouseMoveEvent) {
@@ -38,8 +43,9 @@ export class TileGridMoveSupport extends MoveSupport {
     // TODO CGU get all tiles at new place not just one and move all?
     // TODO CGU current insert logic moves tiles vertically to the bottom
 
+    // TODO CGU do it on drop not live
     this.tileGrid.setTiles(newElements);
-    this._moveData.elements = this.tileGrid.tiles;
+
     // Update element infos right after layout is done but BEFORE animation starts to get the final position of the tiles
     this.tileGrid.one('layoutDone', event => this._updateElementInfos());
   }
