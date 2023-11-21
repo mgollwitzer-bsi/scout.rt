@@ -7,7 +7,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-import {BrowserField, Device, EnumObject, FormFieldLayout, PropertyChangeEvent, Tile, WidgetTile} from '../../index';
+import {BrowserField, Device, EnumObject, FormField, FormFieldLayout, InitModelOf, PropertyChangeEvent, Tile, Widget, WidgetTile} from '../../index';
 
 export type FormFieldTileDisplayStyle = EnumObject<typeof FormFieldTile.DisplayStyle>;
 
@@ -26,15 +26,15 @@ export class FormFieldTile extends WidgetTile {
     DASHBOARD: 'dashboard'
   }; // not const, can be extended
 
-  override init(model: InitModelOf<this>) {
-    super.init(model);
-    this._setDisplayStyle(this.displayStyle);
-  }
-
   protected override _renderProperties() {
     super._renderProperties();
     this._renderFieldLabelVisible();
     this._renderCompact();
+  }
+
+  protected override _setTileWidget(tileWidget: Widget) {
+    super._setTileWidget(tileWidget);
+    this._setDisplayStyle(this.displayStyle);
   }
 
   protected override _renderTileWidget() {
