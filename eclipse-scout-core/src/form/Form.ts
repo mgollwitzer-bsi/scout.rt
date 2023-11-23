@@ -331,7 +331,7 @@ export class Form extends Widget implements FormModel, DisplayParent {
   }
 
   /**
-   * Loads the data and renders the form afterwards by adding it to the desktop.
+   * Loads the data and renders the form afterward by adding it to the desktop.
    *
    * Calling this method is equivalent to calling {@link load} first and once the promise is resolved, calling {@link show}.
    *
@@ -444,7 +444,7 @@ export class Form extends Widget implements FormModel, DisplayParent {
 
   /**
    * Method may be implemented to load the data.
-   * By default, a resolved promise containing {@link this.data} is returned.
+   * By default, a resolved promise containing {@link data} is returned.
    */
   protected _load(): JQuery.Promise<any> {
     return $.resolvedPromise().then(() => {
@@ -494,14 +494,14 @@ export class Form extends Widget implements FormModel, DisplayParent {
   }
 
   /**
-   * Imports the {@link this.data} to the form.
+   * Imports the {@link data} to the form.
    */
   importData() {
     // NOP
   }
 
   /**
-   * Exports the form to {@link this.data}.
+   * Exports the form to {@link data}.
    */
   exportData(): any {
     return null;
@@ -726,7 +726,7 @@ export class Form extends Widget implements FormModel, DisplayParent {
   /**
    * This function is called when the user presses the "x" icon.
    *
-   * It will either call {@link #close()} or {@link #cancel()), depending on the enabled and visible system buttons, see {@link _abort}.
+   * It will either call {@link #close()} or {@link #cancel()}, depending on the enabled and visible system buttons, see {@link _abort}.
    */
   abort() {
     let event = new Event();
@@ -744,7 +744,7 @@ export class Form extends Widget implements FormModel, DisplayParent {
   }
 
   /**
-   * Will call {@link #close()} if there is a close menu or button, otherwise {@link #cancel()) will be called.
+   * Will call {@link #close()} if there is a close menu or button, otherwise {@link #cancel()} will be called.
    */
   protected _abort() {
     // Search for a close button in the menus and buttons of the root group box
@@ -996,11 +996,19 @@ export class Form extends Widget implements FormModel, DisplayParent {
   }
 
   updateSaveNeeded() {
-    this.setSaveNeeded(this.rootGroupBox ? this.rootGroupBox.saveNeeded : false);
+    if (!this.initialized || this.destroying) {
+      return;
+    }
+    this.setSaveNeeded(this.rootGroupBox?.saveNeeded || this._computeSaveNeeded());
+  }
+
+  protected _computeSaveNeeded(): boolean {
+    return false;
   }
 
   markAsSaved() {
     this.rootGroupBox?.markAsSaved();
+    this.updateSaveNeeded();
   }
 
   protected setSaveNeeded(saveNeeded: boolean) {
