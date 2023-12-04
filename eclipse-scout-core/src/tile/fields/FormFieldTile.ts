@@ -7,7 +7,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-import {BrowserField, Device, EnumObject, FormField, FormFieldLayout, InitModelOf, PropertyChangeEvent, Tile, Widget, WidgetTile} from '../../index';
+import {aria, BrowserField, Device, EnumObject, FormField, FormFieldLayout, PropertyChangeEvent, Tile, Widget, WidgetTile} from '../../index';
 
 export type FormFieldTileDisplayStyle = EnumObject<typeof FormFieldTile.DisplayStyle>;
 
