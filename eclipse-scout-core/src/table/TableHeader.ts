@@ -456,7 +456,7 @@ export class TableHeader extends Widget implements TableHeaderModel {
     let accessibleStateText = '';
     if (column.sortActive) {
       let sortDirection = column.sortAscending ? 'asc' : 'desc';
-      accessibleStateText += this.session.text('ui.Sorting') + ' ' + (column.sortAscending ? this.session.text('ui.ascending') : this.session.text('ui.descending'));
+      accessibleStateText += ' ' + this.session.text('ui.Sorting') + ' ' + (column.sortAscending ? this.session.text('ui.ascending') : this.session.text('ui.descending'));
       if (column.grouped) {
         $header.addClass('group-' + sortDirection);
       }

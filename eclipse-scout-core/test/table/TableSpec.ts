@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 import {
-  BeanColumn, Column, ColumnModel, Device, graphics, IconColumn, icons, Menu, MenuDestinations, NumberColumn, ObjectFactory, Range, RemoteEvent, scout, scrollbars, Status, Table, TableField, TableRow, TableRowModel, Tooltip
+  BeanColumn, Column, ColumnModel, Device, graphics, IconColumn, icons, Menu, MenuDestinations, NumberColumn, ObjectFactory, Range, RemoteEvent, scout, scrollbars, Status, strings, Table, TableField, TableRow, TableRowModel, Tooltip
 } from '../../src/index';
 import {JQueryTesting, LocaleSpecHelper, SpecTable, TableSpecHelper} from '../../src/testing/index';
 import $ from 'jquery';
@@ -33,6 +33,8 @@ describe('Table', () => {
     session = sandboxSession();
     session.locale = new LocaleSpecHelper().createLocale(LocaleSpecHelper.DEFAULT_LOCALE);
     helper = new TableSpecHelper(session);
+    session.textMap.add('ui.Sorting', 'sorting');
+    session.textMap.add('ui.ascending', 'ascending');
     $.fx.off = true; // generation of sum rows is animated. leads to misleading test failures.
     jasmine.Ajax.install();
     jasmine.clock().install();
@@ -2745,7 +2747,7 @@ describe('Table', () => {
       table.updateColumnHeaders([column1, column2]);
       $colHeaders = table.header.findHeaderItems();
       expect($colHeaders.eq(0).text()).toBe(column0.text);
-      expect($colHeaders.eq(1).text()).toBe(column1.text);
+      expect($colHeaders.eq(1).text()).toBe(strings.join(' ', column1.text, 'sorting', 'ascending'));
       expect($colHeaders.eq(1)).toHaveClass('sort-asc');
       expect($colHeaders.eq(2).text()).toBe(column2.text);
     });

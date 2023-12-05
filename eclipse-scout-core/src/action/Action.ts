@@ -184,10 +184,9 @@ export class Action extends Widget implements ActionModel {
       } else {
         this.$text.text(text);
       }
-    } else if (text) {
+    } else {
       // add as label for screen readers
       aria.label(this.$container, text);
-    } else {
       this._removeText();
     }
   }
