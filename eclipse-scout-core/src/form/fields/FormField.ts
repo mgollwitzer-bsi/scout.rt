@@ -857,6 +857,10 @@ export class FormField extends Widget implements FormFieldModel {
     this.parent.invalidateLogicalGrid();
   }
 
+  setGridData(gridData: GridData) {
+    this.setProperty('gridData', gridData);
+  }
+
   /** @internal */
   _setGridData(gridData: GridData) {
     if (!gridData) {
