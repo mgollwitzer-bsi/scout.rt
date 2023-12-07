@@ -141,4 +141,10 @@ export interface TileGridModel extends WidgetModel {
    */
   updateTextFilterText?: string;
   defaultMenuTypes?: string[];
+  /**
+   * Defines whether the grid column count should be dynamically adjusted if the preferred width of the grid exceeds the available width.
+   *
+   * Default is true.
+   */
+  wrappable?: boolean;
 }

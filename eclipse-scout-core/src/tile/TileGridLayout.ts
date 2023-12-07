@@ -7,7 +7,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-import {arrays, Dimension, graphics, HtmlComponent, HtmlCompPrefSizeOptions, Insets, LogicalGridLayout, PlaceholderTile, Point, Rectangle, scout, scrollbars, styles, Tile, TileGrid, TileGridLayoutConfig, Widget} from '../index';
+import {arrays, Dimension, graphics, HtmlComponent, HtmlCompPrefSizeOptions, Insets, LogicalGridLayout, Point, Rectangle, scout, scrollbars, styles, Tile, TileGrid, TileGridLayoutConfig, Widget} from '../index';
 import $ from 'jquery';
 
 export class TileGridLayout extends LogicalGridLayout {
@@ -97,7 +97,7 @@ export class TileGridLayout extends LogicalGridLayout {
     }
 
     // If content does not fit, the columnCount will be reduced until it fits
-    while (!contentFits && this.widget.gridColumnCount > 1) {
+    while (!contentFits && this.widget.wrappable && this.widget.gridColumnCount > 1) {
       this.widget.gridColumnCount--;
       this.widget.invalidateLayout();
       this.widget.invalidateLogicalGrid(false);
