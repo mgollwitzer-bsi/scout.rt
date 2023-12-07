@@ -27,7 +27,7 @@ export class VerticalSmartGrid extends AbstractGrid {
 
     // set gridData
     widgets.forEach(f => {
-      f.gridData = matrix.getGridData(f);
+      f._setGridData(matrix.getGridData(f))
     });
     this.gridRows = matrix.getRowCount();
   }
