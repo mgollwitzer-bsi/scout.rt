@@ -440,13 +440,16 @@ export class FocusManager implements FocusManagerOptions {
       return true;
     }
 
-    // Don't prevent default action for draggable elements which is dragstart event
-    if (focusUtils.isDraggable($element)) {
+    // Allow focus gain on elements with a focusable parent, e.g. when clicking on a row in a table.
+    if (focusUtils.containsParentFocusableByMouse($element, $element.entryPoint())) {
       return true;
     }
 
-    // Allow focus gain on elements with a focusable parent, e.g. when clicking on a row in a table.
-    if (focusUtils.containsParentFocusableByMouse($element, $element.entryPoint())) {
+    // Don't prevent default action for draggable elements which is dragstart event
+    if (focusUtils.isDraggable($element)) {
+      // Unfortunately, preventDefault will not only prevent dragstart but also focus gain
+      // If the draggable element is not focusable, we need to restore the focus later otherwise the desktop would be focused
+      focusUtils.restoreFocusLater(this.session.$entryPoint);
       return true;
     }
 
