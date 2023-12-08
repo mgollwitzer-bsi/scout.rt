@@ -10,10 +10,13 @@
 package org.eclipse.scout.rt.client.ui.desktop.hybrid;
 
 import org.eclipse.scout.rt.client.ui.IWidget;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @HybridActionType(DisposeWidgetsHybridAction.TYPE)
 public class DisposeWidgetsHybridAction extends AbstractHybridAction<DisposeWidgetsHybridActionDo> {
   protected static final String TYPE = "DisposeWidgets";
+  private static final Logger LOG = LoggerFactory.getLogger(DisposeWidgetsHybridAction.class);
 
   @Override
   public void execute(DisposeWidgetsHybridActionDo data) {
@@ -21,6 +24,7 @@ public class DisposeWidgetsHybridAction extends AbstractHybridAction<DisposeWidg
       IWidget widget = hybridManager().getWidgetById(id);
       if (widget != null) {
         hybridManager().disposeWidget(widget);
+        LOG.debug("Disposed hybrid widget with id {}", id);
       }
     }
   }

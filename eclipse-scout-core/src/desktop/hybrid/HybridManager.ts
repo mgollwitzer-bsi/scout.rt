@@ -131,7 +131,7 @@ export class HybridManager extends Widget {
     return UuidPool.take(this.session);
   }
 
-  // TODO CGU call instead of trigger would be a better name
+  // TODO CGU call instead of trigger would be a better name, actionType instead of eventType, maybe just call ist callAction
   /**
    * @returns the id of the triggered hybrid action
    */
