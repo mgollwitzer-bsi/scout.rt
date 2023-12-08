@@ -56,6 +56,12 @@
       background-color: @move-support-drag-placeholder-background-color;
       border: 2px dashed @move-support-drag-placeholder-border-color;
     }
+
+    & .scroll-shadow {
+      // Scroll shadow would be drawn over after element -> hide it
+      --scroll-shadow-size: transparent !important;
+      transition: none;
+    }
   }
 
   &.dragging {
