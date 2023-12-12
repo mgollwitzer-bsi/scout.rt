@@ -54,6 +54,7 @@
       border-radius: inherit;
       background-color: @move-support-drag-placeholder-background-color;
       border: 2px dashed @move-support-drag-placeholder-border-color;
+      z-index: 2; // draw over elements inside the tile having a z-index
     }
 
     & .scroll-shadow {
@@ -63,10 +64,20 @@
     }
   }
 
+  &.dragged-end,
+  &.dragged-end * { // Necessary if an element inside the tile uses visibility: visible
+    visibility: hidden !important;
+  }
+
   &.dragging {
+    --dragging-scale: 1;
+    --animation-duration-factor: 1;
+    transform: scale(var(--dragging-scale));
+    transition-duration: calc(300ms * var(--animation-duration-factor));
+    transition-property: transform, opacity;
+    opacity: 0.7;
     z-index: 2; // draw over scrollbars
 
-    // TODO CGU necessary?
     // Dedicated shadow element (so it can be animated)
     & > .shadow {
       position: absolute;
@@ -79,6 +90,14 @@
       pointer-events: none;
       border-radius: inherit;
     }
+  }
+
+  &.dragging-end {
+    opacity: 1;
+  }
+
+  &.dragover {
+    filter: brightness(0.8);
   }
 }
 

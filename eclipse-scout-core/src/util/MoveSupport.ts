@@ -9,6 +9,7 @@
  */
 import {Dimension, events, graphics, Point} from '@eclipse-scout/core';
 import $ from 'jquery';
+import {Rectangle} from '../layout/Rectangle';
 
 /**
  * Minimal distance in pixels for a "mouse move" action to take effect.
@@ -22,6 +23,7 @@ export class MoveSupport {
   protected _callback: any;
   protected _moveData: any;
   protected _animationDurationFactor: number;
+  protected _maxCloneSize: number;
   protected _mouseMoveHandler: (event: JQuery.MouseDownEvent) => void;
   protected _mouseUpHandler: (event: JQuery.MouseUpEvent) => void;
 
@@ -35,6 +37,7 @@ export class MoveSupport {
     this._moveData = null;
 
     this._animationDurationFactor = 1;
+    this._maxCloneSize = 200;
 
     this._mouseMoveHandler = this._onMouseMove.bind(this);
     this._mouseUpHandler = this._onMouseUp.bind(this);
@@ -114,6 +117,7 @@ export class MoveSupport {
     this._moveData.currentCursorPosition = this._moveData.startCursorPosition;
     // Compute distances from the cursor to the edges of the chart section
     this._moveData.cursorDistanceTop = event.pageY - this._moveData.draggedElementInfo.offset.top;
+    this._moveData.cursorDistanceLeft = event.pageX - this._moveData.draggedElementInfo.offset.left;
     this._moveData.cursorDistanceBottom = this._moveData.draggedElementInfo.offset.top + this._moveData.draggedElementInfo.height - event.pageY;
 
     this._moveData.top = 0;
@@ -148,17 +152,20 @@ export class MoveSupport {
   }
 
   protected _updateElementInfo(elementInfo) {
-    let $element = elementInfo.$element;
+    $.extend(elementInfo, this._createElementInfo(elementInfo.$element));
+  }
+
+  protected _createElementInfo($element) {
     let offset = $element.offset();
     let top = offset.top - this._moveData.containerOffset.top;
     let left = offset.left - this._moveData.containerOffset.left;
-    $.extend(elementInfo, {
+    return {
       offset: offset,
       top: top,
       left: left,
       height: $element.cssHeight(),
       width: $element.cssWidth()
-    });
+    };
   }
 
   protected _updateElementInfos() {
@@ -184,7 +191,7 @@ export class MoveSupport {
     this._moveData.$clone && this._moveData.$clone.remove();
 
     // Restore styles
-    this._moveData.$draggedElement.removeClass('dragged');
+    this._moveData.$draggedElement.removeClass('dragged dragged-end');
     // this._moveData.elementInfos.forEach(info => info.$element.attrOrRemove('style', info.origStyle));
     this._moveData.$container.attrOrRemove('style', this._moveData.containerOrigStyle);
     this._moveData.$container.removeClass('dragging-element');
@@ -248,36 +255,7 @@ export class MoveSupport {
     if (!this._moveData.$clone) {
       this._moveData.cloneStartOffset = this._moveData.$draggedElement.offset();
       this._moveData.cloneSize = new Dimension(this._moveData.$draggedElement.cssWidth(), this._moveData.$draggedElement.cssHeight());
-      this._moveData.$clone = this._moveData.$draggedElement.clone()
-        .addClass('dragging clone')
-        .removeAttr('data-id')
-        .css('position', 'fixed')
-        .appendTo(this._moveData.session.$entryPoint);
-      // Because the clone is added to the $entryPoint (to ensure it is drawn above everything else),
-      // the mouse wheel events won't bubble to the container. To make the mouse while work while
-      // dragging, we delegate the event manually.
-      this._moveData.$clone.on('DOMMouseScroll mousewheel', event => this._moveData.$container.trigger(event));
-
-      // // Clone canvas contents manually
-      // let origCanvases = this._moveData.$draggedElement.find('canvas:visible');
-      // this._moveData.$clone.find('canvas:visible').each((index, canvas) => {
-      //   try {
-      //     canvas.getContext('2d').drawImage(origCanvases.get(index), 0, 0);
-      //   } catch (err) {
-      //     // Drawing on the canvas can throw unexpected errors, for example:
-      //     // "DOMException: Failed to execute 'drawImage' on 'CanvasRenderingContext2D':
-      //     // The image argument is a canvas element with a width or height of 0."
-      //     let log = window && window.console && (window.console.warn || window.console.log);
-      //     log && log('Unable to clone canvas. Reason: ', err);
-      //   }
-      // });
-
-      this._moveData.$cloneShadow = this._moveData.$clone.prependDiv('shadow')
-        .animate({
-          opacity: 1
-        }, {
-          duration: 250 * this._animationDurationFactor
-        });
+      this._append$Clone();
 
       this._moveData.$draggedElement.addClass('dragged'); // Change style of dragged chart
     }
@@ -286,9 +264,18 @@ export class MoveSupport {
       top: this._moveData.cloneStartOffset.top + distance.y,
       left: this._moveData.cloneStartOffset.left + distance.x
     };
+    let scale = 1;
+    if (this._moveData.cloneSize.width > this._maxCloneSize) {
+      scale = this._maxCloneSize / this._moveData.cloneSize.width;
+    }
+    if (this._moveData.cloneSize.height > this._maxCloneSize) {
+      scale = Math.min(this._maxCloneSize / this._moveData.cloneSize.height, scale);
+    }
     this._moveData.$clone.css({
-      top: this._moveData.cloneOffset.top,
-      left: this._moveData.cloneOffset.left
+      'top': this._moveData.cloneOffset.top,
+      'left': this._moveData.cloneOffset.left,
+      '--dragging-scale': scale,
+      'transform-origin': this._moveData.cursorDistanceLeft + 'px ' + this._moveData.cursorDistanceTop + 'px'
     });
 
     // Don't change chart order if the clone is outside the container area
@@ -390,6 +377,39 @@ export class MoveSupport {
     // });
   }
 
+  protected _append$Clone() {
+    let $clone = this._moveData.$draggedElement.clone()
+      .addClass('dragging clone')
+      .removeAttr('data-id')
+      .css('position', 'fixed')
+      .appendTo(this._moveData.session.$entryPoint);
+    // Because the clone is added to the $entryPoint (to ensure it is drawn above everything else),
+    // the mouse wheel events won't bubble to the container. To make the mouse while work while
+    // dragging, we delegate the event manually.
+    $clone.on('DOMMouseScroll mousewheel', event => this._moveData.$container.trigger(event));
+
+    // // Clone canvas contents manually
+    let origCanvases = this._moveData.$draggedElement.find('canvas:visible');
+    $clone.find('canvas:visible').each((index, canvas) => {
+      try {
+        canvas.getContext('2d').drawImage(origCanvases.get(index), 0, 0);
+      } catch (err) {
+        // Drawing on the canvas can throw unexpected errors, for example:
+        // "DOMException: Failed to execute 'drawImage' on 'CanvasRenderingContext2D':
+        // The image argument is a canvas element with a width or height of 0."
+        let log = window && window.console && (window.console.warn || window.console.log);
+        log && log('Unable to clone canvas. Reason: ', err);
+      }
+    });
+    this._moveData.$clone = $clone;
+    this._moveData.$cloneShadow = this._moveData.$clone.prependDiv('shadow')
+      .animate({
+        opacity: 1
+      }, {
+        duration: 250 * this._animationDurationFactor
+      });
+  }
+
   protected _handleMove(event: JQuery.MouseMoveEvent) {
 
   }
@@ -402,64 +422,78 @@ export class MoveSupport {
       .off('mouseup touchend touchcancel', this._mouseUpHandler);
     $('iframe').removeClass('dragging-in-progress');
 
-    // -----
+    this._onMoveEnd(event)
+      .then(targetBounds => this._moveToTarget(targetBounds))
+      .then(() => {
+        this._restoreStyles();
 
-    // Remove clone (animated)
-    let promises = [];
-    if (this._moveData.$clone) {
-      let targetOffset = this._moveData.draggedElementInfo.offset;
-      let targetHeight = this._moveData.draggedElementInfo.height;
-      let targetWidth = this._moveData.draggedElementInfo.width;
-      // Fade out placeholder ($draggedElement is made visible again in _restoreStyles later)
-      // promises.push(this._moveData.$draggedElement
-      //   .css('opacity', 1)
-      //   .animate({
-      //     opacity: 0
-      //   }, {
-      //     duration: 500 * this._animationDurationFactor
-      //   })
-      //   .promise());
-      // Fade out shadow
-      promises.push(this._moveData.$cloneShadow
-        .stop(true)
-        .animate({
-          opacity: 0
-        }, {
-          duration: 500 * this._animationDurationFactor
-        })
-        .promise());
-      // Move clone to target position
-      promises.push(this._moveData.$clone
-        .css('pointer-events', 'none')
-        .animate({
-          top: targetOffset.top,
-          left: targetOffset.left,
-          width: targetWidth,
-          height: targetHeight
-        }, {
-          easing: 'easeOutQuart',
-          duration: 500 * this._animationDurationFactor
-        })
-        .promise());
+        // let oldElements = this._moveData.elements;
+        // let newElements = oldElements.slice().sort((e1, e2) => {
+        //   let pos1 = arrays.findIndex(this._moveData.elementInfos, (info: any) => info.element === e1);
+        //   let pos2 = arrays.findIndex(this._moveData.elementInfos, (info: any) => info.element === e2);
+        //   return pos1 - pos2;
+        // });
+
+        // if (!arrays.equals(oldElements, newElements)) {
+        //   this._callback && this._callback(newElements);
+        // }
+
+        // TODO CGU origStyle schiebt kachel wieder zurück, wieso bei kohorten nicht?
+        this._moveData = null;
+      });
+  }
+
+  protected _moveToTarget(targetBounds: Rectangle) {
+    if (!this._moveData.$clone) {
+      return $.resolvedPromise();
     }
+    let promises = [];
+    this._moveData.$clone.addClass('dragging-end');
+    this._moveData.$draggedElement.addClass('dragged-end');
 
-    $.promiseAll(promises).then(() => {
-      this._restoreStyles();
+    // Move clone to target position and restore original size
+    promises.push(this._moveData.$clone
+      .css('pointer-events', 'none')
+      .css('--dragging-scale', '1')
+      .animate({
+        top: targetBounds.y,
+        left: targetBounds.x,
+        width: targetBounds.width,
+        height: targetBounds.height
+      }, {
+        easing: 'easeOutQuart',
+        duration: 500 * this._animationDurationFactor
+      })
+      .promise());
 
-      // let oldElements = this._moveData.elements;
-      // let newElements = oldElements.slice().sort((e1, e2) => {
-      //   let pos1 = arrays.findIndex(this._moveData.elementInfos, (info: any) => info.element === e1);
-      //   let pos2 = arrays.findIndex(this._moveData.elementInfos, (info: any) => info.element === e2);
-      //   return pos1 - pos2;
-      // });
+    // Fade out placeholder ($draggedElement is made visible again in _restoreStyles later)
+    // promises.push(this._moveData.$draggedElement
+    //   .css('opacity', 1)
+    //   .animate({
+    //     opacity: 0
+    //   }, {
+    //     duration: 500 * this._animationDurationFactor
+    //   })
+    //   .promise());
+    // Fade out shadow
+    promises.push(this._moveData.$cloneShadow
+      .stop(true)
+      .animate({
+        opacity: 0
+      }, {
+        duration: 500 * this._animationDurationFactor
+      })
+      .promise());
 
-      // if (!arrays.equals(oldElements, newElements)) {
-      //   this._callback && this._callback(newElements);
-      // }
+    return $.promiseAll(promises);
+  }
 
-      // TODO CGU origStyle schiebt kachel wieder zurück, wieso bei kohorten nicht?
-      // End move
-      this._moveData = null;
-    });
+  protected _beforeMoveEnd(): JQuery.Promise<any> {
+    return $.resolvedPromise();
+  }
+
+  protected _onMoveEnd(event: JQuery.MouseUpEvent): JQuery.Promise<Rectangle> {
+    let info = this._moveData.draggedElementInfo;
+    return $.resolvedPromise(new Rectangle(info.offset.left, info.offset.top, info.width, info.height));
   }
 }
