@@ -7,44 +7,40 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-import {Dimension, events, graphics, Point} from '@eclipse-scout/core';
+import {Event, EventEmitter, EventMap, events, graphics, Insets, Point, Rectangle, Session, Widget} from '../index';
 import $ from 'jquery';
-import {Rectangle} from '../layout/Rectangle';
-import {Widget} from '../widget/Widget';
 
-/**
- * Minimal distance in pixels for a "mouse move" action to take effect.
- * Prevents "mini jumps" when simply clicking on an element.
- */
-const MOUSE_MOVE_THRESHOLD = 7;
+export class MoveSupport<TElem extends Widget> extends EventEmitter {
+    declare eventMap: MoveSupportEventMap;
+    /**
+     * Minimal distance in pixels for a "mouse move" action to take effect.
+     * Prevents "mini jumps" when simply clicking on an element.
+     */
+    mouseMoveThreshold: number;
+    /**
+     * The maximum size the clone should have. If it exceeds that size it will be scaled down.
+     */
+    maxCloneSize: number;
 
-// TODO CGU cleanup, remove all not essential
-// TODO CGU use Rectangle and Point, use bounds instead of offset with with and height
-export class MoveSupport<TElem extends Widget> {
-  protected _callback: any;
-  protected _moveData: any;
+    protected _moveData: MoveData<TElem>;
   protected _animationDurationFactor: number;
-  protected _maxCloneSize: number;
   protected _mouseMoveHandler: (event: JQuery.MouseMoveEvent) => void;
   protected _mouseUpHandler: (event: JQuery.MouseUpEvent) => void;
 
-  /**
-   * @param callback - function to be called when the move has ended. Argument: list of elements in new order.
-   */
-  constructor(callback) {
-    this._callback = callback;
+    constructor() {
+        super();
 
-    // Temporary data structure to store data while mouse actions are handled
+        this.maxCloneSize = 200;
+        this.mouseMoveThreshold = 7;
+
     this._moveData = null;
-
-    this._animationDurationFactor = 1;
-    this._maxCloneSize = 200;
+        this._animationDurationFactor = 1; // for debugging to slow down the animation
 
     this._mouseMoveHandler = this._onMouseMove.bind(this);
     this._mouseUpHandler = this._onMouseUp.bind(this);
   }
 
-  startMove(event: JQuery.MouseDownEvent, elements: TElem[], draggedElement: TElem) {
+    start(event: JQuery.MouseDownEvent, elements: TElem[], draggedElement: TElem): boolean {
     if (this._moveData) {
       // Do nothing, when dragging is already in progress. This can happen when the user leaves
       // the browser window (e.g. using Alt-Tab) while holding the mouse button pressed and
@@ -66,12 +62,13 @@ export class MoveSupport<TElem extends Widget> {
     // Therefore, we always suppress the scrolling in JS. Because this also suppresses the 'click'
     // event, click actions have to be triggered manually in the 'mouseup' handler.
     event.preventDefault();
+        return true;
   }
 
   protected _initMoveData(event: JQuery.MouseDownEvent, elements: TElem[], draggedElement: TElem) {
     let $window = draggedElement.$container.window();
     let $elements = draggedElement.$container.parent();
-    this._moveData = {};
+      this._moveData = {} as MoveData<TElem>;
     this._moveData.session = draggedElement.session;
     this._moveData.$window = $window;
     this._moveData.$container = $elements;
@@ -81,8 +78,32 @@ export class MoveSupport<TElem extends Widget> {
     this._moveData.containerOrigStyle = $elements.attr('style');
 
     this._moveData.elements = elements;
-    this._moveData.newElements = [...elements];
-    this._moveData.elementInfos = elements
+      this._moveData.elementInfos = this._createElementInfos(elements, draggedElement);
+
+      this._moveData.startCursorPosition = new Point(
+          event.pageX - this._moveData.containerBounds.x,
+          event.pageY - this._moveData.containerBounds.y
+      );
+      this._moveData.currentCursorPosition = this._moveData.startCursorPosition;
+
+      // Compute distances from the cursor to the edges of the dragged element
+      let draggedElementInfo = this._moveData.draggedElementInfo;
+      this._moveData.cursorDistance = new Insets(
+          event.pageY - draggedElementInfo.bounds.y,
+          draggedElementInfo.bounds.x + draggedElementInfo.bounds.width - event.pageX,
+          draggedElementInfo.bounds.y + this._moveData.draggedElementInfo.bounds.height - event.pageY,
+          event.pageX - draggedElementInfo.bounds.x
+      );
+
+      this._moveData.$window
+          .off('mousemove touchmove', this._mouseMoveHandler)
+          .off('mouseup touchend touchcancel', this._mouseUpHandler)
+          .on('mousemove touchmove', this._mouseMoveHandler)
+          .on('mouseup touchend touchcancel', this._mouseUpHandler);
+  }
+
+    private _createElementInfos(elements: TElem[], draggedElement: TElem): DraggableElementInfo<TElem>[] {
+        return elements
       .filter(element => !!element.$container)
       .map((element, index) => {
         // Collect various information about each element. This allows us to retrieve positions later on without
@@ -92,54 +113,26 @@ export class MoveSupport<TElem extends Widget> {
           element: element,
           $element: $element,
           origStyle: $element.attr('style')
-        };
+        } as DraggableElementInfo<TElem>;
         this._updateElementInfo(info);
         if (element === draggedElement) {
           this._moveData.draggedElementInfo = info;
-          this._moveData.$draggedElement = $element; // convenience (short for draggedElementInfo.$element)
+            this._moveData.$draggedElement = $element;
         }
         return info;
       });
-
-    // TODO CGU cursor stuff needed?
-
-    this._moveData.startCursorPosition = new Point(
-      event.pageX - this._moveData.containerBounds.x,
-      event.pageY - this._moveData.containerBounds.y
-    );
-    this._moveData.currentCursorPosition = this._moveData.startCursorPosition;
-    // Compute distances from the cursor to the edges of the chart section
-    this._moveData.cursorDistanceTop = event.pageY - this._moveData.draggedElementInfo.offset.top;
-    this._moveData.cursorDistanceLeft = event.pageX - this._moveData.draggedElementInfo.offset.left;
-    this._moveData.cursorDistanceBottom = this._moveData.draggedElementInfo.offset.top + this._moveData.draggedElementInfo.height - event.pageY;
-
-    this._moveData.top = 0;
-    this._moveData.left = 0;
-    if (this._moveData.elementInfos.length) {
-      this._moveData.top = this._moveData.elementInfos[0].top;
-      this._moveData.left = this._moveData.elementInfos[0].left;
     }
 
-    this._moveData.$window
-      .off('mousemove touchmove', this._mouseMoveHandler)
-      .off('mouseup touchend touchcancel', this._mouseUpHandler)
-      .on('mousemove touchmove', this._mouseMoveHandler)
-      .on('mouseup touchend touchcancel', this._mouseUpHandler);
-  }
-
-  protected _updateElementInfo(elementInfo) {
-    // offset   = absolute position (relative to the window)
-    // top/left = relative position (relative to the container)
+    protected _updateElementInfo(elementInfo: DraggableElementInfo<TElem>) {
     let $element = elementInfo.$element;
-    let offset = $element.offset();
-    let top = offset.top - this._moveData.containerBounds.y;
-    let left = offset.left - this._moveData.containerBounds.x;
+        let bounds = graphics.offsetBounds($element);
+        let position = new Point(
+            bounds.x - this._moveData.containerBounds.x,
+            bounds.y - this._moveData.containerBounds.y
+        );
     $.extend(elementInfo, {
-      offset: offset,
-      top: top,
-      left: left,
-      height: $element.cssHeight(),
-      width: $element.cssWidth()
+        position: position,
+        bounds: bounds
     });
   }
 
@@ -147,16 +140,12 @@ export class MoveSupport<TElem extends Widget> {
     this._moveData.elementInfos.forEach(info => this._updateElementInfo(info));
   }
 
-  cancelMove() {
+    cancel() {
     if (!this._moveData) {
       return;
     }
 
-    this._moveData.$window
-      .off('mousemove touchmove', this._mouseMoveHandler)
-      .off('mouseup touchend touchcancel', this._mouseUpHandler);
-    $('iframe').removeClass('dragging-in-progress');
-
+        this._cleanup();
     this._restoreStyles();
     this._moveData = null;
   }
@@ -176,160 +165,69 @@ export class MoveSupport<TElem extends Widget> {
     events.fixTouchEvent(event);
 
     // Adjust relative values if the panel has been scrolled while dragging (e.g. using the mouse wheel)
-    let containerOffset = this._moveData.$container.offset();
-    if (containerOffset.top !== this._moveData.containerBounds.y) {
-      let dy = containerOffset.top - this._moveData.containerBounds.y;
-      this._moveData.containerBounds.y += dy;
-      if (this._moveData.cloneStartOffset) {
-        this._moveData.cloneStartOffset.top += dy;
-      }
+      let containerOffset = graphics.offset(this._moveData.$container);
+      if (!containerOffset.equals(this._moveData.containerBounds.point())) {
+          let diff = containerOffset.subtract(this._moveData.containerBounds.point());
+          this._moveData.containerBounds = this._moveData.containerBounds.translate(diff);
+          this._moveData.cloneStartOffset = this._moveData.cloneStartOffset.add(diff);
       this._moveData.elementInfos.forEach(info => {
-        info.offset.top += dy;
+          info.bounds = info.bounds.translate(diff);
       });
     }
-
-    // -----
 
     this._moveData.currentCursorPosition = new Point(
       event.pageX - this._moveData.containerBounds.x,
       event.pageY - this._moveData.containerBounds.y
     );
-    let distance = new Point(
-      this._moveData.currentCursorPosition.x - this._moveData.startCursorPosition.x,
-      this._moveData.currentCursorPosition.y - this._moveData.startCursorPosition.y
-    );
+      let distance = this._moveData.currentCursorPosition.subtract(this._moveData.startCursorPosition);
 
     // Ignore small mouse movements
     if (!this._moveData.moving) {
-      if (Math.abs(distance.x) < MOUSE_MOVE_THRESHOLD && Math.abs(distance.y) < MOUSE_MOVE_THRESHOLD) {
+        if (Math.abs(distance.x) < this.mouseMoveThreshold && Math.abs(distance.y) < this.mouseMoveThreshold) {
         return;
       }
       this._moveData.moving = true;
       this._onFirstMouseMove();
     }
 
-    // -----
-
-    // Create a clone of the dragged chart that is positioned 'fixed', i.e. with document-absolute coordinates
+      // Create a clone of the dragged element that is positioned 'fixed', i.e. with document-absolute coordinates
     if (!this._moveData.$clone) {
-      this._moveData.cloneStartOffset = this._moveData.$draggedElement.offset();
-      this._moveData.cloneSize = new Dimension(this._moveData.$draggedElement.cssWidth(), this._moveData.$draggedElement.cssHeight());
+        this._moveData.cloneBounds = graphics.offsetBounds(this._moveData.$draggedElement);
+        this._moveData.cloneStartOffset = this._moveData.cloneBounds.point();
       this._append$Clone();
 
-      this._moveData.$draggedElement.addClass('dragged'); // Change style of dragged chart
+        // Change style of dragged element
+        this._moveData.$draggedElement.addClass('dragged');
     }
+
     // Update clone position
-    this._moveData.cloneOffset = {
-      top: this._moveData.cloneStartOffset.top + distance.y,
-      left: this._moveData.cloneStartOffset.left + distance.x
-    };
+      this._moveData.cloneBounds = this._moveData.cloneBounds.moveTo(this._moveData.cloneStartOffset.add(distance));
+
+      // Scale down clone if necessary
     let scale = 1;
-    if (this._moveData.cloneSize.width > this._maxCloneSize) {
-      scale = this._maxCloneSize / this._moveData.cloneSize.width;
+      if (this._moveData.cloneBounds.width > this.maxCloneSize) {
+          scale = this.maxCloneSize / this._moveData.cloneBounds.width;
     }
-    if (this._moveData.cloneSize.height > this._maxCloneSize) {
-      scale = Math.min(this._maxCloneSize / this._moveData.cloneSize.height, scale);
+      if (this._moveData.cloneBounds.height > this.maxCloneSize) {
+          scale = Math.min(this.maxCloneSize / this._moveData.cloneBounds.height, scale);
     }
     this._moveData.$clone.css({
-      'top': this._moveData.cloneOffset.top,
-      'left': this._moveData.cloneOffset.left,
+        'top': this._moveData.cloneBounds.y,
+        'left': this._moveData.cloneBounds.x,
       '--dragging-scale': scale,
-      'transform-origin': this._moveData.cursorDistanceLeft + 'px ' + this._moveData.cursorDistanceTop + 'px'
+        'transform-origin': this._moveData.cursorDistance.left + 'px ' + this._moveData.cursorDistance.top + 'px'
     });
 
-    // Don't change chart order if the clone is outside the container area
-    if (!this._moveData.containerBounds.intersects(new Rectangle(this._moveData.cloneOffset.left, this._moveData.cloneOffset.top, this._moveData.cloneSize.width, this._moveData.cloneSize.height))) {
+      // Don't change element order if the clone is outside the container area
+      if (!this._moveData.containerBounds.intersects(this._moveData.cloneBounds)) {
       return;
     }
 
-    this._handleMove(event); // TODO CGU or just ovverride onMoueMove?
+      this._drag(event);
+  }
 
-    // -----
-    //
-    // let currentIndex = this._moveData.elementInfos.indexOf(this._moveData.draggedElementInfo);
-    // let moveBeforeIndex = -1;
-    // let moveAfterIndex = -1;
-    //
-    // let cursorY = this._moveData.currentCursorPosition.y;
-    // let currentTop = this._moveData.draggedElementInfo.top;
-    // let currentBottom = currentTop + this._moveData.draggedElementInfo.height;
-    // if (currentIndex >= 0 && cursorY < currentTop) {
-    //   // Cursor is above current chart --> check previous charts (backward)
-    //   for (let i = currentIndex - 1; i >= 0; i--) {
-    //     let info = this._moveData.elementInfos[i];
-    //     // Check if the top edge of dragged chart passed the middle of this chart
-    //     if (cursorY - this._moveData.cursorDistanceTop < info.top + (info.height * 0.5)) {
-    //       moveBeforeIndex = i;
-    //     }
-    //   }
-    // } else if (currentIndex < this._moveData.elementInfos.length && cursorY > currentBottom) {
-    //   // Cursor is below current chart --> check next charts (forward)
-    //   for (let i = currentIndex + 1; i < this._moveData.elementInfos.length; i++) {
-    //     let info = this._moveData.elementInfos[i];
-    //     // Check if the bottom edge of dragged chart passed the middle of this chart
-    //     if (cursorY + this._moveData.cursorDistanceBottom > info.top + (info.height * 0.5)) {
-    //       moveAfterIndex = i;
-    //     }
-    //   }
-    // }
-    //
-    // let cursorX = this._moveData.currentCursorPosition.x;
-    // let currentLeft = this._moveData.draggedElementInfo.left;
-    // let currentRight = currentLeft + this._moveData.draggedElementInfo.width;
-    // if (currentIndex >= 0 && cursorX < currentLeft) {
-    //   // Cursor is left of current element --> check previous elements (backward)
-    //   for (let i = currentIndex - 1; i >= 0; i--) {
-    //     let info = this._moveData.elementInfos[i];
-    //     // Check if the top edge of dragged element passed the middle of this element
-    //     if (cursorX - this._moveData.cursorDistanceTop < info.top + (info.height * 0.5)) {
-    //       moveBeforeIndex = i;
-    //     }
-    //   }
-    // } else if (currentIndex < this._moveData.elementInfos.length && cursorY > currentBottom) {
-    //   // Cursor is below current chart --> check next charts (forward)
-    //   for (let i = currentIndex + 1; i < this._moveData.elementInfos.length; i++) {
-    //     let info = this._moveData.elementInfos[i];
-    //     // Check if the bottom edge of dragged chart passed the middle of this chart
-    //     if (cursorY + this._moveData.cursorDistanceBottom > info.top + (info.height * 0.5)) {
-    //       moveAfterIndex = i;
-    //     }
-    //   }
-    // }
-    //
-    //
-    // if (moveBeforeIndex < 0 && moveAfterIndex < 0) {
-    //   // Nothing to do
-    //   return;
-    // }
-    //
-    // if (moveBeforeIndex >= 0) {
-    //   // Move current chart *before* another chart
-    //   arrays.move(this._moveData.elementInfos, currentIndex, moveBeforeIndex);
-    // } else if (moveAfterIndex >= 0) {
-    //   // Move current chart *after* another chart
-    //   arrays.move(this._moveData.elementInfos, currentIndex, moveAfterIndex);
-    // }
-    //
-    // // Update positions
-    // let top = this._moveData.top;
-    // let affectedIndexFrom = (moveBeforeIndex >= 0 ? moveBeforeIndex : currentIndex);
-    // let affectedIndexTo = (moveAfterIndex >= 0 ? moveAfterIndex : currentIndex);
-    // this._moveData.elementInfos.forEach((info, index, arr) => {
-    //   if (index >= affectedIndexFrom || index <= affectedIndexTo) {
-    //     // Affected chart --> Update target position
-    //     info.offset.top = this._moveData.containerBounds.y + top;
-    //     info.top = top;
-    //     // Animate
-    //     info.$element
-    //       .stop(true)
-    //       .animate({
-    //         top: info.top
-    //       }, {
-    //         duration: 250 * this._animationDurationFactor
-    //       });
-    //   }
-    //   top += info.height + this._moveData.vgap;
-    // });
+    protected _drag(event: JQuery.MouseMoveEvent) {
+        this.trigger('drag');
   }
 
   protected _onFirstMouseMove() {
@@ -348,17 +246,16 @@ export class MoveSupport<TElem extends Widget> {
     // dragging, we delegate the event manually.
     $clone.on('DOMMouseScroll mousewheel', event => this._moveData.$container.trigger(event));
 
-    // // Clone canvas contents manually
-    let origCanvases = this._moveData.$draggedElement.find('canvas:visible');
-    $clone.find('canvas:visible').each((index, canvas) => {
+      // Clone canvas contents manually
+      let origCanvases = this._moveData.$draggedElement.find('canvas:visible') as JQuery<HTMLCanvasElement>;
+      $clone.find('canvas:visible').each((index, canvas: HTMLCanvasElement) => {
       try {
         canvas.getContext('2d').drawImage(origCanvases.get(index), 0, 0);
       } catch (err) {
         // Drawing on the canvas can throw unexpected errors, for example:
         // "DOMException: Failed to execute 'drawImage' on 'CanvasRenderingContext2D':
         // The image argument is a canvas element with a width or height of 0."
-        let log = window && window.console && (window.console.warn || window.console.log);
-        log && log('Unable to clone canvas. Reason: ', err);
+          $.log.isWarnEnabled() && $.log.warn('Unable to clone canvas. Reason: ', err);
       }
     });
     this._moveData.$clone = $clone;
@@ -370,40 +267,30 @@ export class MoveSupport<TElem extends Widget> {
       });
   }
 
-  protected _handleMove(event: JQuery.MouseMoveEvent) {
-
-  }
-
-  _onMouseUp(event) {
+    protected _onMouseUp(event: JQuery.MouseUpEvent) {
     events.fixTouchEvent(event);
+        this._cleanup();
+        this._dragEnd(event)
+            .then(targetBounds => this._moveToTarget(targetBounds).then(() => targetBounds))
+            .then(targetBounds => {
+                this._restoreStyles();
 
+                if (!targetBounds.equals(this._moveData.draggedElementInfo.bounds)) {
+                    this._moveEnd();
+                }
+                this._moveData = null;
+                this._end();
+            });
+    }
+
+    protected _cleanup() {
     this._moveData.$window
       .off('mousemove touchmove', this._mouseMoveHandler)
       .off('mouseup touchend touchcancel', this._mouseUpHandler);
     $('iframe').removeClass('dragging-in-progress');
-
-    this._onMoveEnd(event)
-      .then(targetBounds => this._moveToTarget(targetBounds))
-      .then(() => {
-        this._restoreStyles();
-
-        // let oldElements = this._moveData.elements;
-        // let newElements = oldElements.slice().sort((e1, e2) => {
-        //   let pos1 = arrays.findIndex(this._moveData.elementInfos, (info: any) => info.element === e1);
-        //   let pos2 = arrays.findIndex(this._moveData.elementInfos, (info: any) => info.element === e2);
-        //   return pos1 - pos2;
-        // });
-
-        // if (!arrays.equals(oldElements, newElements)) {
-        //   this._callback && this._callback(newElements);
-        // }
-
-        // TODO CGU origStyle schiebt kachel wieder zurück, wieso bei kohorten nicht?
-        this._moveData = null;
-      });
   }
 
-  protected _moveToTarget(targetBounds: Rectangle) {
+    protected _moveToTarget(targetBounds: Rectangle): JQuery.Promise<void> {
     if (!this._moveData.$clone) {
       return $.resolvedPromise();
     }
@@ -426,6 +313,7 @@ export class MoveSupport<TElem extends Widget> {
       })
       .promise());
 
+        // TODO CGU can this be done by css? not useful for tile grid probably
     // Fade out placeholder ($draggedElement is made visible again in _restoreStyles later)
     // promises.push(this._moveData.$draggedElement
     //   .css('opacity', 1)
@@ -448,12 +336,106 @@ export class MoveSupport<TElem extends Widget> {
     return $.promiseAll(promises);
   }
 
-  protected _beforeMoveEnd(): JQuery.Promise<any> {
-    return $.resolvedPromise();
+    /**
+     * @returns the target offset bounds to where the element should be moved
+     */
+    protected _dragEnd(event: JQuery.MouseUpEvent): JQuery.Promise<Rectangle> {
+    let info = this._moveData.draggedElementInfo;
+        return $.resolvedPromise(new Rectangle(info.bounds.x, info.bounds.y, info.bounds.width, info.bounds.height));
   }
 
-  protected _onMoveEnd(event: JQuery.MouseUpEvent): JQuery.Promise<Rectangle> {
-    let info = this._moveData.draggedElementInfo;
-    return $.resolvedPromise(new Rectangle(info.offset.left, info.offset.top, info.width, info.height));
-  }
+    protected _moveEnd() {
+        this.trigger('moveEnd');
+    }
+
+    protected _end() {
+        this.trigger('end');
+    }
+
+    protected _cancel() {
+        this.trigger('cancel');
+    }
+}
+
+/**
+ * Temporary data structure to store data while mouse actions are handled.
+ */
+export interface MoveData<TElem extends Widget> {
+    /**
+     * Distance from cursor to the edges of the dragged element.
+     */
+    cursorDistance: Insets;
+    session: Session;
+    $window: JQuery<Window>;
+    /**
+     * The container containing the draggable elements
+     */
+    $container: JQuery;
+    /**
+     * The offset bounds of the container;
+     */
+    containerBounds: Rectangle;
+    /**
+     * The styles the container had before the moving started.
+     */
+    containerOrigStyle: string;
+    /**
+     * The draggable elements.
+     */
+    elements: TElem[];
+    /**
+     * Contains various information about each element.
+     */
+    elementInfos: DraggableElementInfo<TElem>[];
+    /**
+     * Contains various information about the dragged element.
+     */
+    draggedElementInfo: DraggableElementInfo<TElem>;
+    /**
+     * Points to draggedElementInfo.$element.
+     */
+    $draggedElement: JQuery;
+    /**
+     * The position of the cursor when the dragging started.
+     */
+    startCursorPosition: Point;
+    /**
+     * The current position of the cursor.
+     */
+    currentCursorPosition: Point;
+    /**
+     * Whether an element is being moved.
+     */
+    moving: boolean;
+    /**
+     * A clone of the dragged element that follows the cursor. The dragged element itself stays at its original position until it should be moved to a new location.
+     */
+    $clone: JQuery;
+    /**
+     * A dedicated shadow element so it can be animated.
+     */
+    $cloneShadow: JQuery;
+    cloneStartOffset: Point;
+    cloneBounds: Rectangle;
+}
+
+export interface DraggableElementInfo<TElem extends Widget> {
+    element: TElem;
+    $element: JQuery;
+    origStyle: string;
+    /**
+     * The relative position to the container.
+     */
+    position: Point;
+    /**
+     * The size and absolute position (relative to the window).
+     */
+    bounds: Rectangle;
+}
+
+export interface MoveSupportEventMap extends EventMap {
+    'drag': Event;
+    'moveEnd': Event;
+    'end': Event;
+    'cancel': Event;
 }

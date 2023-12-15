@@ -103,17 +103,29 @@ export class Rectangle {
 
   /**
    * Moves the rectangle the given distance.
-   * <p>
-   * @param dx the distance to move the rectangle along the x axis.
-   * @param dy the distance to move the rectangle along the y axis.
+   *
+   * @param dxOrPoint the distance to move the rectangle along the x-axis, or a point object containing the diff on the x and y-axis.
+   * @param dy the distance to move the rectangle along the y-axis.
    */
-  translate(dx: number, dy: number): Rectangle {
-    return new Rectangle(
-      this.x + dx,
-      this.y + dy,
-      this.width,
-      this.height);
+  translate(dxOrPoint: number | Point, dy?: number): Rectangle {
+      let point = this.point().add(new Point(dxOrPoint, dy));
+      return this.moveTo(point);
   }
+
+    /**
+     * Moves the rectangle to the new point.
+     *
+     * @param xOrPoint the new position on the x-axis or a point object containing the new position.
+     * @param y the new position on the y-axis.
+     */
+    moveTo(xOrPoint: number | Point, y?: number): Rectangle {
+        let point = new Point(xOrPoint, y);
+        return new Rectangle(
+            point.x,
+            point.y,
+            this.width,
+            this.height);
+    }
 
   /**
    * @returns property x and y of this instance as new {@link Point} instance.
@@ -135,8 +147,8 @@ export class Rectangle {
     if (tx2 < 0 || ty2 < 0) {
       // This rectangle has negative dimensions...
       // If r has non-negative dimensions then it is the answer.
-      // If r is non-existant (has a negative dimension), then both
-      // are non-existant and we can return any non-existant rectangle
+        // If r is non-existent (has a negative dimension), then both
+        // are non-existent, and we can return any non-existent rectangle
       // as an answer.  Thus, returning r meets that criterion.
       // Either way, r is our answer.
       return new Rectangle(r.x, r.y, r.width, r.height);

@@ -8,19 +8,18 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-import {arrays, Dimension, graphics, GridData, MoveSupport, Rectangle, scout, Tile, TileGrid} from '../index';
+import {arrays, graphics, GridData, MoveData, MoveSupport, Rectangle, scout, Tile, TileGrid} from '../index';
 
 export class TileGridMoveSupport extends MoveSupport<Tile> {
+    declare _moveData: TileMoveData;
   tileGrid: TileGrid;
-  swappedTiles: Map<Tile, GridData>;
 
-  constructor(callback, tileGrid: TileGrid) {
-    super(callback);
+    constructor(tileGrid: TileGrid) {
+        super();
     this.tileGrid = tileGrid;
-    this.swappedTiles = new Map();
   }
 
-  protected override _handleMove(event: JQuery.MouseMoveEvent) {
+    protected override _drag(event: JQuery.MouseMoveEvent) {
     if (this._moveData.tileBelowCursor) {
       this._moveData.tileBelowCursor.$container.removeClass('dragover');
     }
@@ -38,9 +37,9 @@ export class TileGridMoveSupport extends MoveSupport<Tile> {
     this._moveData.tileBelowCursor.$container.addClass('dragover');
   }
 
-  protected override _onMoveEnd(event: JQuery.MouseUpEvent): JQuery.Promise<Rectangle> {
+    protected override _dragEnd(event: JQuery.MouseUpEvent): JQuery.Promise<Rectangle> {
     if (!this._moveData.tileBelowCursor) {
-      return super._onMoveEnd(event);
+        return super._dragEnd(event);
     }
     let tileBelowCursor = this._moveData.tileBelowCursor;
     let newElements = [...this._moveData.elements];
@@ -54,16 +53,16 @@ export class TileGridMoveSupport extends MoveSupport<Tile> {
     this.tileGrid.setTiles(newElements);
     this._moveData.elements = this.tileGrid.tiles;
     // Update element infos right after layout is done but BEFORE animation starts to get the final position of the tiles
+        // FIXME CGU this throws an error if tile is moved from a place holder on the right to another one left of it
     this._moveData.tileBelowCursor.$container.removeClass('dragover');
 
-    let targetBounds: Rectangle;
     let def = $.Deferred();
     // Wait for layout to get correct target dimensions (grid cells may have changed size and position)
     // Cannot use 'when' because the promise would resolve while the bounds animation is already running
     this.tileGrid.one('layoutDone', () => {
       // Dragged tile is now already at the target position
       let targetBounds = graphics.offsetBounds(draggedTile.$container);
-      if (targetBounds.dimension().equals(new Dimension(this._moveData.draggedElementInfo.width, this._moveData.draggedElementInfo.height))) {
+        if (targetBounds.dimension().equals(this._moveData.draggedElementInfo.bounds.dimension())) {
         // If size does not change, there is no need to replace the clone
         def.resolve(targetBounds);
         return;
@@ -92,4 +91,8 @@ export class TileGridMoveSupport extends MoveSupport<Tile> {
     });
     return def.promise();
   }
+}
+
+export interface TileMoveData extends MoveData<Tile> {
+    tileBelowCursor: Tile;
 }
