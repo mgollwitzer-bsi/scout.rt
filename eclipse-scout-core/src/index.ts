@@ -901,6 +901,7 @@ export * from './tile/TileGridGridConfig';
 export * from './tile/TileGridLayout';
 export * from './tile/TileGridLayoutConfig';
 export * from './tile/TileGridSelectionHandler';
+export * from './tile/TileGridMoveSupport';
 export * from './tile/TileTextFilter';
 export * from './tile/CompositeTile';
 export * from './tile/HtmlTile';

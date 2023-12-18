@@ -14,12 +14,12 @@ export class TileGridMoveSupport extends MoveSupport<Tile> {
     declare _moveData: TileMoveData;
   tileGrid: TileGrid;
 
-    constructor(tileGrid: TileGrid) {
-        super();
+  constructor(tileGrid: TileGrid) {
+    super();
     this.tileGrid = tileGrid;
   }
 
-    protected override _drag(event: JQuery.MouseMoveEvent) {
+  protected override _drag(event: JQuery.MouseMoveEvent) {
     if (this._moveData.tileBelowCursor) {
       this._moveData.tileBelowCursor.$container.removeClass('dragover');
     }
@@ -33,36 +33,39 @@ export class TileGridMoveSupport extends MoveSupport<Tile> {
       this._moveData.tileBelowCursor = null;
       return;
     }
+    tileBelowCursor.$container.addClass('dragover');
     this._moveData.tileBelowCursor = tileBelowCursor;
-    this._moveData.tileBelowCursor.$container.addClass('dragover');
   }
 
-    protected override _dragEnd(event: JQuery.MouseUpEvent): JQuery.Promise<Rectangle> {
+  protected override _dragEnd(event: JQuery.MouseUpEvent): JQuery.Promise<Rectangle> {
     if (!this._moveData.tileBelowCursor) {
-        return super._dragEnd(event);
+      return super._dragEnd(event);
     }
     let tileBelowCursor = this._moveData.tileBelowCursor;
+    tileBelowCursor.$container.removeClass('dragover');
+
     let newElements = [...this._moveData.elements];
     let draggedTile: Tile = this._moveData.draggedElementInfo.element;
-    let newTile: Tile = tileBelowCursor;
     let draggedGridData = new GridData(draggedTile.gridDataHints);
-    let newGridData = new GridData(newTile.gridDataHints);
-    arrays.swap(newElements, newTile, draggedTile);
-    newTile.setGridDataHints(draggedGridData);
-    draggedTile.setGridDataHints(newGridData);
+    let targetTile: Tile = tileBelowCursor;
+    let targetGridData = new GridData(targetTile.gridDataHints);
+    arrays.swap(newElements, targetTile, draggedTile);
+    targetTile.setGridDataHints(draggedGridData);
+    draggedTile.setGridDataHints(targetGridData);
     this.tileGrid.setTiles(newElements);
-    this._moveData.elements = this.tileGrid.tiles;
-    // Update element infos right after layout is done but BEFORE animation starts to get the final position of the tiles
-        // FIXME CGU this throws an error if tile is moved from a place holder on the right to another one left of it
-    this._moveData.tileBelowCursor.$container.removeClass('dragover');
 
+    // Update element infos right after layout is done but BEFORE animation starts to get the final position of the tiles
     let def = $.Deferred();
     // Wait for layout to get correct target dimensions (grid cells may have changed size and position)
     // Cannot use 'when' because the promise would resolve while the bounds animation is already running
     this.tileGrid.one('layoutDone', () => {
+      // Layout change implies that tile was moved
+      // -> mark it, so it can be made invisible by CSS (clone will be moved to new position, draggedTile itself should not be visibly moved by the layout)
+      draggedTile.$container.addClass('moved');
+
       // Dragged tile is now already at the target position
       let targetBounds = graphics.offsetBounds(draggedTile.$container);
-        if (targetBounds.dimension().equals(this._moveData.draggedElementInfo.bounds.dimension())) {
+      if (targetBounds.dimension().equals(this._moveData.draggedElementInfo.bounds.dimension())) {
         // If size does not change, there is no need to replace the clone
         def.resolve(targetBounds);
         return;
@@ -91,8 +94,13 @@ export class TileGridMoveSupport extends MoveSupport<Tile> {
     });
     return def.promise();
   }
+
+  protected override _restoreStyles() {
+    this._moveData.$draggedElement.removeClass('moved');
+    super._restoreStyles();
+  }
 }
 
 export interface TileMoveData extends MoveData<Tile> {
-    tileBelowCursor: Tile;
+  tileBelowCursor: Tile;
 }

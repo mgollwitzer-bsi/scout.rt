@@ -8,13 +8,12 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 import {
-    AbstractGrid, aria, arrays, Comparator, ContextMenuKeyStroke, ContextMenuPopup, DoubleClickSupport, EnumObject, Filter, FilterOrFunction, FilterResult, FilterSupport, FullModelOf, graphics, HorizontalGrid, HtmlComponent, InitModelOf,
-    KeyStrokeContext, LoadingSupport, LogicalGrid, LogicalGridData, LogicalGridLayoutConfig, Menu, MenuDestinations, MenuFilter, menus as menuUtil, numbers, ObjectOrChildModel, ObjectOrModel, objects, PlaceholderTile, Predicate, Range,
-    scout, ScrollToOptions, TextFilter, Tile, TileGridEventMap, TileGridGridConfig, TileGridLayout, TileGridLayoutConfig, TileGridModel, TileGridSelectAllKeyStroke, TileGridSelectDownKeyStroke, TileGridSelectFirstKeyStroke,
-    TileGridSelectionHandler, TileGridSelectLastKeyStroke, TileGridSelectLeftKeyStroke, TileGridSelectRightKeyStroke, TileGridSelectUpKeyStroke, TileTextFilter, UpdateFilteredElementsOptions, VirtualScrolling, Widget
+  AbstractGrid, aria, arrays, Comparator, ContextMenuKeyStroke, ContextMenuPopup, DoubleClickSupport, EnumObject, Filter, FilterOrFunction, FilterResult, FilterSupport, FullModelOf, graphics, HorizontalGrid, HtmlComponent, InitModelOf,
+  KeyStrokeContext, LoadingSupport, LogicalGrid, LogicalGridData, LogicalGridLayoutConfig, Menu, MenuDestinations, MenuFilter, menus as menuUtil, numbers, ObjectOrChildModel, ObjectOrModel, objects, PlaceholderTile, Predicate, Range, scout,
+  ScrollToOptions, TextFilter, Tile, TileGridEventMap, TileGridGridConfig, TileGridLayout, TileGridLayoutConfig, TileGridModel, TileGridMoveSupport, TileGridSelectAllKeyStroke, TileGridSelectDownKeyStroke, TileGridSelectFirstKeyStroke,
+  TileGridSelectionHandler, TileGridSelectLastKeyStroke, TileGridSelectLeftKeyStroke, TileGridSelectRightKeyStroke, TileGridSelectUpKeyStroke, TileTextFilter, UpdateFilteredElementsOptions, VirtualScrolling, Widget
 } from '../index';
 import $ from 'jquery';
-import {TileGridMoveSupport} from './TileGridMoveSupport';
 
 /**
  * Only select top-level tile elements. Do not select elements with a 'tile' class deeper in the tree.
@@ -75,8 +74,6 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
   protected _renderViewPortAfterAttach: boolean;
   protected _scrollParentScrollHandler: (event: JQuery.ScrollEvent) => void;
   protected _dragTileMouseDownHandler: (event: JQuery.MouseDownEvent) => void;
-  protected _dragTileMouseMoveHandler: (event: JQuery.MouseMoveEvent) => void;
-  protected _dragTileMouseUpHandler: (event: JQuery.MouseUpEvent) => void;
 
   constructor() {
     super();
@@ -1031,15 +1028,16 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
 
   protected _onDragTileMouseDown(event: JQuery.MouseDownEvent) {
     let tile = scout.widget($(event.currentTarget)) as Tile;
-      // Install move support for each drag operation so that a tile can be dragged even if another one is still finishing dragging
-      let moveSupport = new TileGridMoveSupport(this);
-      if (moveSupport.start(event, this.tiles, tile)) {
-          let handler = () => moveSupport.cancel();
-          this.one('remove', handler);
-          moveSupport.one('end', () => {
-              this.off('remove', handler);
-          });
-      }
+    // Install move support for each drag operation so that a tile can be dragged even if another one is still finishing dragging
+    let moveSupport = new TileGridMoveSupport(this);
+    if (moveSupport.start(event, this.tiles, tile)) {
+      // TODO CGU maybe better to incorporate this into move support -> pass widget to MoveSupport if available
+      let handler = () => moveSupport.cancel();
+      this.one('remove', handler);
+      moveSupport.one('end', () => {
+        this.off('remove', handler);
+      });
+    }
   }
 
   protected _onTileMouseDown(event: JQuery.MouseDownEvent): boolean {

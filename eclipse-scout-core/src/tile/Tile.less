@@ -43,6 +43,15 @@
   &.dragged {
     z-index: -1; // draw behind all other elements (during animation)
 
+    &.releasing {
+      opacity: 0;
+      transition: opacity 500ms;
+
+      &.moved {
+        transition: none;
+      }
+    }
+
     // Overlay over currently dragged element
     &::after {
       content: '';
@@ -64,9 +73,10 @@
     }
   }
 
-  &.dragged-end,
-  &.dragged-end * { // Necessary if an element inside the tile uses visibility: visible
-    visibility: hidden !important;
+  // done class is added when dragging is finished and original state restored right before dragged and dragged-end classes are removed
+  // the class will be removed about 50ms later and is used to disable the opacity transition. This ensures the dragged element does not flicker when shown again.
+  &.drag-done {
+    transition: none !important;
   }
 
   &.dragging {
@@ -74,9 +84,13 @@
     --animation-duration-factor: 1;
     transform: scale(var(--dragging-scale));
     transition-duration: calc(300ms * var(--animation-duration-factor));
-    transition-property: transform, opacity;
+    transition-property: transform, opacity, box-shadow;
     opacity: 0.7;
     z-index: 2; // draw over scrollbars
+
+    &.releasing {
+      opacity: 1;
+    }
 
     // Dedicated shadow element (so it can be animated)
     & > .shadow {
@@ -90,10 +104,6 @@
       pointer-events: none;
       border-radius: inherit;
     }
-  }
-
-  &.dragging-end {
-    opacity: 1;
   }
 
   &.dragover {
