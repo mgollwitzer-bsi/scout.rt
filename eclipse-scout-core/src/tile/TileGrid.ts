@@ -8,10 +8,11 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 import {
-  AbstractGrid, aria, arrays, Comparator, ContextMenuKeyStroke, ContextMenuPopup, DoubleClickSupport, EnumObject, Filter, FilterOrFunction, FilterResult, FilterSupport, FullModelOf, graphics, HorizontalGrid, HtmlComponent, InitModelOf,
-  KeyStrokeContext, LoadingSupport, LogicalGrid, LogicalGridData, LogicalGridLayoutConfig, Menu, MenuDestinations, MenuFilter, menus as menuUtil, numbers, ObjectOrChildModel, ObjectOrModel, objects, PlaceholderTile, Predicate, Range, scout,
-  ScrollToOptions, TextFilter, Tile, TileGridEventMap, TileGridGridConfig, TileGridLayout, TileGridLayoutConfig, TileGridModel, TileGridMoveSupport, TileGridSelectAllKeyStroke, TileGridSelectDownKeyStroke, TileGridSelectFirstKeyStroke,
-  TileGridSelectionHandler, TileGridSelectLastKeyStroke, TileGridSelectLeftKeyStroke, TileGridSelectRightKeyStroke, TileGridSelectUpKeyStroke, TileTextFilter, UpdateFilteredElementsOptions, VirtualScrolling, Widget
+  AbstractGrid, aria, arrays, Comparator, ContextMenuKeyStroke, ContextMenuPopup, DoubleClickSupport, EnumObject, Event, Filter, FilterOrFunction, FilterResult, FilterSupport, FullModelOf, graphics, HorizontalGrid, HtmlComponent,
+  InitModelOf, KeyStrokeContext, LoadingSupport, LogicalGrid, LogicalGridData, LogicalGridLayoutConfig, Menu, MenuDestinations, MenuFilter, menus as menuUtil, numbers, ObjectOrChildModel, ObjectOrModel, objects, PlaceholderTile, Predicate,
+  Range, scout, ScrollToOptions, TextFilter, Tile, TileGridEventMap, TileGridGridConfig, TileGridLayout, TileGridLayoutConfig, TileGridModel, TileGridMoveSupport, TileGridSelectAllKeyStroke, TileGridSelectDownKeyStroke,
+  TileGridSelectFirstKeyStroke, TileGridSelectionHandler, TileGridSelectLastKeyStroke, TileGridSelectLeftKeyStroke, TileGridSelectRightKeyStroke, TileGridSelectUpKeyStroke, TileResizeHandler, TileTextFilter, UpdateFilteredElementsOptions,
+  VirtualScrolling, Widget
 } from '../index';
 import $ from 'jquery';
 
@@ -32,6 +33,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
   comparator: Comparator<TTile>;
   contextMenu: ContextMenuPopup;
   draggable: boolean;
+  resizable: boolean; // TODO CGU rename because tile grid itself is not resizable? Same as for selectable and draggable, wrappable? Form.ts also has resizable and movable
   empty: boolean;
   filters: Filter<TTile>[];
   filteredElementsDirty: boolean;
@@ -75,6 +77,8 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
   protected _scrollParentScrollHandler: (event: JQuery.ScrollEvent) => void;
   protected _dragTileMouseDownHandler: (event: JQuery.MouseDownEvent) => void;
 
+  // protected _resizeTileMouseDownHandler: (event: JQuery.MouseDownEvent) => void;
+
   constructor() {
     super();
     this.animateTileRemoval = true;
@@ -82,6 +86,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
     this.comparator = null;
     this.contextMenu = null;
     this.draggable = false;
+    this.resizable = false;
     this._doubleClickSupport = new DoubleClickSupport();
     this.empty = false;
     this.filters = [];
@@ -123,6 +128,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
     this._renderViewPortAfterAttach = false;
     this._scrollParentScrollHandler = this._onScrollParentScroll.bind(this);
     this._dragTileMouseDownHandler = this._onDragTileMouseDown.bind(this);
+    // this._resizeTileMouseDownHandler = this._onResizeTileMouseDown.bind(this);
     this._addWidgetProperties(['tiles', 'selectedTiles', 'menus']);
     this._addPreserveOnPropertyChangeProperties(['selectedTiles']);
     this._addComputedProperties(['tiles', 'filteredTiles']);
@@ -229,6 +235,7 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
     this._renderEmpty();
     this._renderTextFilterEnabled();
     this._renderDraggable();
+    this._renderResizable();
   }
 
   protected override _remove() {
@@ -1027,6 +1034,10 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
   }
 
   protected _onDragTileMouseDown(event: JQuery.MouseDownEvent) {
+    let $target = $(event.target);
+    if ($target.hasClass('resizable-handle')) {
+      return;
+    }
     let tile = scout.widget($(event.currentTarget)) as Tile;
     // Install move support for each drag operation so that a tile can be dragged even if another one is still finishing dragging
     let moveSupport = new TileGridMoveSupport(this);
@@ -1038,6 +1049,43 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
         this.off('remove', handler);
       });
     }
+  }
+
+  protected _renderResizable() {
+    let resizeHandler: (Event) => boolean = this._onResize.bind(this);
+
+    for (let tile of this.tiles) {
+      if (!tile.$container) {
+        continue;
+      }
+      // TODO CGU maybe move to Tile.ts, it needs to be done when tile is rendered and destroyed when removed
+      if (this.resizable) {
+        if (tile.$container.data('resizable')) {
+          continue;
+        }
+        if (tile.hasCssClass('item-summary-designer-placeholder')) {
+          // TODO CGU make customizable to not use item-summary class
+          continue;
+        }
+        let resizable = scout.create(TileResizeHandler, {
+          tileGrid: this,
+          $container: tile.$container,
+          useOverlay: true
+        });
+        tile.$container
+          .data('resizable', resizable)
+          .on('resize', resizeHandler);
+      } else {
+        tile.$container
+          .removeData('resizable')
+          .off('resize', resizeHandler);
+      }
+    }
+  }
+
+  protected _onResize(event: Event): boolean {
+
+    return false;
   }
 
   protected _onTileMouseDown(event: JQuery.MouseDownEvent): boolean {
@@ -1705,7 +1753,32 @@ export class TileGrid<TTile extends Tile = Tile> extends Widget implements TileG
     });
     return tiles;
   }
+
+  static buildMatrix(tiles: Tile[], minWidth = 0, minHeight = 0): TileMatrix {
+    let matrix: TileMatrix = [[]];
+    matrix.maxWidth = minWidth - 1;
+    matrix.maxHeight = minHeight - 1;
+    for (let tile of tiles) {
+      const gridData = tile.gridDataHints;
+      for (let x = gridData.x; x < gridData.x + gridData.w; x++) {
+        if (!matrix[x]) {
+          matrix[x] = [];
+          matrix.maxWidth = Math.max(matrix.maxWidth, x);
+        }
+        for (let y = gridData.y; y < gridData.y + gridData.h; y++) {
+          matrix[x][y] = tile;
+          matrix.maxHeight = Math.max(matrix.maxHeight, y);
+        }
+      }
+    }
+    return matrix;
+  }
 }
 
 export type TileGridMenuType = EnumObject<typeof TileGrid.MenuType>;
+
+export type TileMatrix = Tile[][] & {
+  maxWidth?: number;
+  maxHeight?: number;
+};
 

@@ -24,6 +24,12 @@ export interface TileGridModel extends WidgetModel {
   comparator?: Comparator<Tile>;
   draggable?: boolean; // TODO CGU better use movable?
   /**
+   * Specifies whether the tiles can be resized using drag & drop.
+   *
+   * Default is false.
+   */
+  resizable?: boolean;
+  /**
    * The filters control which tiles are allowed to be displayed in the grid.
    *
    * If one of the filters does not accept a specific tile, the tile won't be shown. Hence, all filters must agree to make a tile visible.
