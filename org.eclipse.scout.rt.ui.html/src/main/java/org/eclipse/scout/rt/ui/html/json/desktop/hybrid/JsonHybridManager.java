@@ -17,6 +17,8 @@ import org.eclipse.scout.rt.client.ui.desktop.hybrid.HybridEvent;
 import org.eclipse.scout.rt.client.ui.desktop.hybrid.HybridEventListener;
 import org.eclipse.scout.rt.client.ui.desktop.hybrid.HybridManager;
 import org.eclipse.scout.rt.dataobject.IDoEntity;
+import org.eclipse.scout.rt.dataobject.IIdEncryptionDataObjectMapper;
+import org.eclipse.scout.rt.platform.BEANS;
 import org.eclipse.scout.rt.platform.util.LazyValue;
 import org.eclipse.scout.rt.ui.html.IUiSession;
 import org.eclipse.scout.rt.ui.html.json.AbstractJsonPropertyObserver;
@@ -33,7 +35,7 @@ public class JsonHybridManager<T extends HybridManager> extends AbstractJsonProp
 
   private HybridEventListener m_listener;
 
-  private final LazyValue<JsonDataObjectHelper> m_jsonDoHelper = new LazyValue<>(JsonDataObjectHelper.class); // cached instance
+  private final LazyValue<JsonDataObjectHelper> m_jsonDoHelper = new LazyValue<>(() -> BEANS.get(JsonDataObjectHelper.class).withDataObjectMapper(BEANS.get(IIdEncryptionDataObjectMapper.class))); // cached instance
 
   public JsonHybridManager(T model, IUiSession uiSession, String id, IJsonAdapter<?> parent) {
     super(model, uiSession, id, parent);

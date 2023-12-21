@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023 BSI Business Systems Integration AG
+ * Copyright (c) 2010, 2024 BSI Business Systems Integration AG
  *
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
@@ -25,6 +25,7 @@ import org.eclipse.scout.rt.client.ui.desktop.hybrid.DummyForm;
 import org.eclipse.scout.rt.client.ui.desktop.hybrid.HybridEvent;
 import org.eclipse.scout.rt.client.ui.desktop.hybrid.HybridManager;
 import org.eclipse.scout.rt.dataobject.IDoEntity;
+import org.eclipse.scout.rt.dataobject.IIdEncryptionDataObjectMapper;
 import org.eclipse.scout.rt.platform.BEANS;
 import org.eclipse.scout.rt.platform.util.ObjectUtility;
 import org.eclipse.scout.rt.testing.client.runner.ClientTestRunner;
@@ -48,6 +49,9 @@ public class JsonHybridManagerTest {
   private UiSessionMock m_uiSession;
   @BeanMock
   private JsonDataObjectHelper m_jsonDataObjectHelper;
+  @SuppressWarnings("unused")
+  @BeanMock
+  private IIdEncryptionDataObjectMapper m_iidEncryptionDataObjectMapper;
   private final Map<JSONObject, IDoEntity> m_jsonDos = new HashMap<>();
 
   @Before

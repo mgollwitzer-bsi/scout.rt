@@ -15,15 +15,16 @@ import java.lang.reflect.Type;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.ext.ParamConverter;
-import jakarta.ws.rs.ext.ParamConverterProvider;
-
 import org.eclipse.scout.rt.dataobject.id.IId;
 import org.eclipse.scout.rt.dataobject.id.IdCodec;
+import org.eclipse.scout.rt.dataobject.id.IdCodec.IdCodecFlag;
 import org.eclipse.scout.rt.platform.ApplicationScoped;
 import org.eclipse.scout.rt.platform.BEANS;
 import org.eclipse.scout.rt.platform.util.LazyValue;
+
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.ext.ParamConverter;
+import jakarta.ws.rs.ext.ParamConverterProvider;
 
 /**
  * Provides a JAX-RS parameter converter for {@link IId}-based types.
@@ -39,7 +40,7 @@ import org.eclipse.scout.rt.platform.util.LazyValue;
  * some reason). In Scout applications, such definitions are never used, <code>null</code> is always the default.
  */
 @ApplicationScoped
-public class IIdParamConverterProvider implements ParamConverterProvider {
+public class IIdParamConverterProvider implements ParamConverterProvider { // TODO fsh context?
 
   private final ConcurrentMap<Class<? extends IId>, ParamConverter<? extends IId>> m_idParamConverters = new ConcurrentHashMap<>();
 
@@ -75,7 +76,7 @@ public class IIdParamConverterProvider implements ParamConverterProvider {
       if (value == null) {
         return null; // always use null as default value, see JavaDoc on IIdParamConverterProvider
       }
-      return m_codec.get().fromUnqualified(m_idClass, value);
+      return m_codec.get().fromUnqualified(m_idClass, value, IdCodecFlag.ENCRYPTION);
     }
 
     @Override
@@ -83,7 +84,7 @@ public class IIdParamConverterProvider implements ParamConverterProvider {
       if (value == null) {
         return null; // always use null as default value, see JavaDoc on IIdParamConverterProvider
       }
-      return m_codec.get().toUnqualified(value);
+      return m_codec.get().toUnqualified(value, IdCodecFlag.ENCRYPTION);
     }
   }
 
@@ -100,7 +101,7 @@ public class IIdParamConverterProvider implements ParamConverterProvider {
       if (value == null) {
         return null; // always use null as default value, see JavaDoc on IIdParamConverterProvider
       }
-      return m_codec.get().fromQualified(value);
+      return m_codec.get().fromQualified(value, IdCodecFlag.ENCRYPTION);
     }
 
     @Override
@@ -108,7 +109,7 @@ public class IIdParamConverterProvider implements ParamConverterProvider {
       if (value == null) {
         return null; // always use null as default value, see JavaDoc on IIdParamConverterProvider
       }
-      return m_codec.get().toQualified(value);
+      return m_codec.get().toQualified(value, IdCodecFlag.ENCRYPTION);
     }
   }
 }

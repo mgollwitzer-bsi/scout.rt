@@ -10,8 +10,11 @@
 package org.eclipse.scout.rt.dataobject.id;
 
 import static org.eclipse.scout.rt.platform.util.Assertions.assertNotNull;
+import static org.eclipse.scout.rt.platform.util.CollectionUtility.arrayList;
+import static org.eclipse.scout.rt.platform.util.ObjectUtility.isOneOf;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -21,12 +24,12 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.PostConstruct;
-
 import org.eclipse.scout.rt.platform.ApplicationScoped;
 import org.eclipse.scout.rt.platform.exception.PlatformException;
 import org.eclipse.scout.rt.platform.util.LazyValue;
 import org.eclipse.scout.rt.platform.util.StringUtility;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * Codec used to convert between {@link IId} instances and their qualified/unqualified representation as {@link String}.
@@ -39,6 +42,14 @@ public class IdCodec {
 
   protected final Map<Class<?>, Function<String, Object>> m_rawTypeFromStringMapper = new HashMap<>();
   protected final Map<Class<?>, Function<Object, String>> m_rawTypeToStringMapper = new HashMap<>();
+
+  public interface IIdCodecFlag {
+  }
+
+  public enum IdCodecFlag implements IIdCodecFlag {
+    LENIENT,
+    ENCRYPTION
+  }
 
   @PostConstruct
   protected void initialize() {
@@ -54,6 +65,13 @@ public class IdCodec {
   // ---------------- IId to String ----------------
 
   /**
+   * @see #toQualified(IId, Collection)
+   */
+  public String toQualified(IId id, IIdCodecFlag... flags) {
+    return toQualified(id, arrayList(flags));
+  }
+
+  /**
    * Returns a string in the format <code>"[type-name]:[raw-id;raw-id;...]"</code>.
    * <ul>
    * <li><b>type-name</b> is computed by {@link IdInventory#getTypeName(IId)}.
@@ -62,7 +80,7 @@ public class IdCodec {
    * converted to their string representation, separated by ';'.
    * </ul>
    */
-  public String toQualified(IId id) {
+  public String toQualified(IId id, Collection<IIdCodecFlag> flags) {
     if (id == null) {
       return null;
     }
@@ -70,7 +88,14 @@ public class IdCodec {
     if (StringUtility.isNullOrEmpty(typeName)) {
       throw new PlatformException("Missing @{} in class {}", IdTypeName.class.getSimpleName(), id.getClass());
     }
-    return typeName + ":" + toUnqualified(id);
+    return typeName + ":" + toUnqualified(id, flags);
+  }
+
+  /**
+   * @see #toUnqualified(IId, Collection)
+   */
+  public String toUnqualified(IId id, IIdCodecFlag... flags) {
+    return toUnqualified(id, arrayList(flags));
   }
 
   /**
@@ -81,7 +106,7 @@ public class IdCodec {
    * converted to their string representation, separated by ';'.
    * </ul>
    */
-  public String toUnqualified(IId id) {
+  public String toUnqualified(IId id, Collection<IIdCodecFlag> flags) {
     if (id == null) {
       return null;
     }
@@ -96,14 +121,21 @@ public class IdCodec {
     else if (id instanceof ICompositeId) {
       List<? extends IId> components = ((ICompositeId) id).unwrap();
       return components.stream()
-          .map(this::toUnqualified)
+          .map(comp -> toUnqualified(comp, flags))
           .map(s -> s == null ? "" : s) // empty string if component is null just in case of composite id
           .collect(Collectors.joining(";"));
     }
-    return handleToUnqualifiedUnknownIdType(id);
+    return handleToUnqualifiedUnknownIdType(id, flags);
   }
 
   // ---------------- String to IId ----------------
+
+  /**
+   * @see #fromQualified(String, Collection)
+   */
+  public IId fromQualified(String qualifiedId, IIdCodecFlag... flags) {
+    return fromQualified(qualifiedId, arrayList(flags));
+  }
 
   /**
    * Parses a string in the format {@code [type-name]:[raw-id;raw-id;...]}.
@@ -112,18 +144,15 @@ public class IdCodec {
    * @throws PlatformException
    *           if the given string does not match the expected format or the referenced class is not found.
    */
-  public IId fromQualified(String qualifiedId) {
-    return fromQualifiedInternal(qualifiedId, false);
+  public IId fromQualified(String qualifiedId, Collection<IIdCodecFlag> flags) {
+    return fromQualifiedInternal(qualifiedId, flags);
   }
 
   /**
-   * Parses a string in the format {@code [type-name]:[raw-id;raw-id;...]}.
-   *
-   * @return {@code IId} parsed from {@code qualifiedId} or {@code null} if the given string does not match the expected
-   *         format or the referenced class is not found.
+   * @see #fromUnqualified(Class, String, Collection)
    */
-  public IId fromQualifiedLenient(String qualifiedId) {
-    return fromQualifiedInternal(qualifiedId, true);
+  public <ID extends IId> ID fromUnqualified(Class<ID> idClass, String unqualifiedId, IIdCodecFlag... flags) {
+    return fromUnqualified(idClass, unqualifiedId, arrayList(flags));
   }
 
   /**
@@ -133,14 +162,14 @@ public class IdCodec {
    * @throws PlatformException
    *           if the given string does not match the expected format
    */
-  public <ID extends IId> ID fromUnqualified(Class<ID> idClass, String unqualifiedId) {
+  public <ID extends IId> ID fromUnqualified(Class<ID> idClass, String unqualifiedId, Collection<IIdCodecFlag> flags) {
     if (idClass == null) {
       throw new PlatformException("Missing id class to parse unqualified id {}", unqualifiedId);
     }
     if (StringUtility.isNullOrEmpty(unqualifiedId)) {
       return null;
     }
-    return fromUnqualifiedUnchecked(idClass, unqualifiedId);
+    return fromUnqualifiedUnchecked(idClass, unqualifiedId, flags);
   }
 
   /**
@@ -177,23 +206,23 @@ public class IdCodec {
   /**
    * Callback method to implement if the codec should be extended to handle qualification of unknown {@link IId} types.
    */
-  protected String handleToUnqualifiedUnknownIdType(IId id) {
+  protected String handleToUnqualifiedUnknownIdType(IId id, Collection<IIdCodecFlag> flags) {
     throw new PlatformException("Unsupported id type {}, cannot convert id {}", id.getClass(), id);
   }
 
   /**
    * Parses a string in the format {@code [type-name]:[raw-id;raw-id;...]}.
    *
-   * @param lenient
-   *          If the structure of the given {@code qualifiedId} is invalid and {@code lenient} flag is set to
-   *          {@code true}, value {@code null} is returned. If {@code lenient} flag is set to {@code false}, an
-   *          exception is thrown.
+   * @param flags
+   *          If the structure of the given {@code qualifiedId} is invalid and {@code IdCodecFlag.LENIENT} flag is set,
+   *          value {@code null} is returned. If {@code IdCodecFlag.LENIENT} flag is not set, an exception is thrown.
    * @return {@code IId} parsed from {@code qualifiedId}
    */
-  protected IId fromQualifiedInternal(String qualifiedId, boolean lenient) {
+  protected IId fromQualifiedInternal(String qualifiedId, Collection<IIdCodecFlag> flags) {
     if (StringUtility.isNullOrEmpty(qualifiedId)) {
       return null;
     }
+    boolean lenient = isOneOf(IdCodecFlag.LENIENT, flags);
     String[] tmp = qualifiedId.split(":", 2); // split into at most two parts
     if (tmp.length < 2) { // no ":" found
       if (lenient) {
@@ -213,7 +242,7 @@ public class IdCodec {
         throw new PlatformException("No class found for type name '{}'", typeName);
       }
     }
-    return fromUnqualified(idClass, tmp[1]);
+    return fromUnqualified(idClass, tmp[1], flags);
   }
 
   /**
@@ -224,16 +253,16 @@ public class IdCodec {
    * @throws PlatformException
    *           if the given string does not match the expected format
    */
-  protected <ID extends IId> ID fromUnqualifiedUnchecked(Class<ID> idClass, String unqualifiedId) {
+  protected <ID extends IId> ID fromUnqualifiedUnchecked(Class<ID> idClass, String unqualifiedId, Collection<IIdCodecFlag> flags) {
     String[] rawComponents = unqualifiedId.split(";", -1 /* force empty strings for empty components */);
-    Object[] components = parseComponents(idClass, rawComponents);
+    Object[] components = parseComponents(idClass, rawComponents, flags);
     return m_idFactory.get().createInternal(idClass, components);
   }
 
   /**
    * Parses given {@code rawComponents} based on the declared component types of given {@code idClass}.
    */
-  protected Object[] parseComponents(Class<? extends IId> idClass, String[] rawComponents) {
+  protected Object[] parseComponents(Class<? extends IId> idClass, String[] rawComponents, Collection<IIdCodecFlag> flags) {
     List<Class<?>> componentTypes = m_idFactory.get().getRawTypes(idClass);
     if (!(componentTypes.size() == rawComponents.length)) {
       throw new PlatformException("Wrong argument size, expected {} parameter, got {} raw components {}, idType={}", componentTypes.size(), rawComponents.length, Arrays.toString(rawComponents), idClass.getName());

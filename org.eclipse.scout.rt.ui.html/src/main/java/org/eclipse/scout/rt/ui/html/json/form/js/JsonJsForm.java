@@ -12,6 +12,7 @@ package org.eclipse.scout.rt.ui.html.json.form.js;
 import org.eclipse.scout.rt.client.ui.form.js.IJsForm;
 import org.eclipse.scout.rt.dataobject.IDataObject;
 import org.eclipse.scout.rt.dataobject.IDoEntity;
+import org.eclipse.scout.rt.dataobject.IIdEncryptionDataObjectMapper;
 import org.eclipse.scout.rt.platform.BEANS;
 import org.eclipse.scout.rt.platform.util.LazyValue;
 import org.eclipse.scout.rt.ui.html.IUiSession;
@@ -28,7 +29,7 @@ public class JsonJsForm<IN extends IDataObject, OUT extends IDataObject, T exten
   private static final String EVENT_SEARCH = "search";
   private static final String EVENT_RESET = "reset";
 
-  private final LazyValue<JsonDataObjectHelper> m_jsonDoHelper = new LazyValue<>(() -> BEANS.get(JsonDataObjectHelper.class)); // cached instance
+  private final LazyValue<JsonDataObjectHelper> m_jsonDoHelper = new LazyValue<>(() -> BEANS.get(JsonDataObjectHelper.class).withDataObjectMapper(BEANS.get(IIdEncryptionDataObjectMapper.class))); // cached instance
 
   public JsonJsForm(T model, IUiSession uiSession, String id, IJsonAdapter<?> parent) {
     super(model, uiSession, id, parent);

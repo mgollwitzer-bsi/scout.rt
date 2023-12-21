@@ -22,6 +22,7 @@ import org.eclipse.scout.rt.dataobject.fixture.FixtureLongId;
 import org.eclipse.scout.rt.dataobject.fixture.FixtureStringId;
 import org.eclipse.scout.rt.dataobject.fixture.FixtureUuId;
 import org.eclipse.scout.rt.dataobject.fixture.FixtureWrapperCompositeId;
+import org.eclipse.scout.rt.dataobject.id.IdCodec.IdCodecFlag;
 import org.eclipse.scout.rt.platform.BEANS;
 import org.eclipse.scout.rt.platform.exception.PlatformException;
 import org.eclipse.scout.rt.platform.util.Assertions.AssertionException;
@@ -513,19 +514,19 @@ public abstract class AbstractIdCodecTest {
   @Test
   public void testFromQualifiedLenient_Default() {
     FixtureUuId id = FixtureUuId.of(TEST_UUID);
-    IId id2 = getCodec().fromQualifiedLenient("scout.FixtureUuId:" + TEST_UUID);
+    IId id2 = getCodec().fromQualified("scout.FixtureUuId:" + TEST_UUID, IdCodecFlag.LENIENT);
     assertEquals(id, id2);
   }
 
   @Test
   public void testFromQualifiedLenient_UnknownType() {
-    IId id = getCodec().fromQualifiedLenient("DoesNotExist:" + TEST_UUID);
+    IId id = getCodec().fromQualified("DoesNotExist:" + TEST_UUID, IdCodecFlag.LENIENT);
     assertNull(id);
   }
 
   @Test
   public void testFromQualifiedLenient_WrongFormat() {
-    IId id = getCodec().fromQualifiedLenient("Does:Not:Exist:" + TEST_UUID);
+    IId id = getCodec().fromQualified("Does:Not:Exist:" + TEST_UUID, IdCodecFlag.LENIENT);
     assertNull(id);
   }
 

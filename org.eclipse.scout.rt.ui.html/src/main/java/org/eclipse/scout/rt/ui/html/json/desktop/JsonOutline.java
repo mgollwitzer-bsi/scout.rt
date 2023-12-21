@@ -24,6 +24,7 @@ import org.eclipse.scout.rt.client.ui.desktop.outline.pages.IPageWithNodes;
 import org.eclipse.scout.rt.client.ui.desktop.outline.pages.IPageWithTable;
 import org.eclipse.scout.rt.client.ui.desktop.outline.pages.js.IJsPage;
 import org.eclipse.scout.rt.client.ui.form.IForm;
+import org.eclipse.scout.rt.dataobject.IIdEncryptionDataObjectMapper;
 import org.eclipse.scout.rt.platform.BEANS;
 import org.eclipse.scout.rt.platform.util.LazyValue;
 import org.eclipse.scout.rt.platform.util.ObjectUtility;
@@ -53,7 +54,7 @@ public class JsonOutline<OUTLINE extends IOutline> extends JsonTree<OUTLINE> {
   private static final String PROP_COMPACT_ROOT = "compactRoot";
 
   private final IDesktop m_desktop;
-  private final LazyValue<JsonDataObjectHelper> m_jsonDoHelper = new LazyValue<>(() -> BEANS.get(JsonDataObjectHelper.class)); // cached instance
+  private final LazyValue<JsonDataObjectHelper> m_jsonDoHelper = new LazyValue<>(() -> BEANS.get(JsonDataObjectHelper.class).withDataObjectMapper(BEANS.get(IIdEncryptionDataObjectMapper.class))); // cached instance
 
   public JsonOutline(OUTLINE outline, IUiSession uiSession, String id, IJsonAdapter<?> parent) {
     super(outline, uiSession, id, parent);

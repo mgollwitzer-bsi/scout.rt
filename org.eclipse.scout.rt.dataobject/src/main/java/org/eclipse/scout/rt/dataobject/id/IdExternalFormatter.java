@@ -9,6 +9,7 @@
  */
 package org.eclipse.scout.rt.dataobject.id;
 
+import org.eclipse.scout.rt.dataobject.id.IdCodec.IdCodecFlag;
 import org.eclipse.scout.rt.platform.ApplicationScoped;
 import org.eclipse.scout.rt.platform.exception.ProcessingException;
 import org.eclipse.scout.rt.platform.util.LazyValue;
@@ -54,7 +55,7 @@ public class IdExternalFormatter {
    * format or there is no type {@code null} is returned.
    */
   public IId fromExternalFormLenient(String externalForm) {
-    return m_codec.get().fromQualifiedLenient(externalForm);
+    return m_codec.get().fromQualified(externalForm, IdCodecFlag.LENIENT);
   }
 
   /**

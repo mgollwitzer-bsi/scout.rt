@@ -117,7 +117,7 @@ public class QualifiedIIdSerializationTest {
     @Override
     public JsonSerializer<?> findSerializer(ScoutDataObjectModuleContext moduleContext, JavaType type, SerializationConfig config, BeanDescription beanDesc) {
       if (type.hasRawClass(FixtureStringId.class) || type.hasRawClass(FixtureUuId.class) || type.hasRawClass(FixtureCompositeId.class)) {
-        return new QualifiedIIdSerializer();
+        return new QualifiedIIdSerializer(moduleContext);
       }
 
       return null;
@@ -126,7 +126,7 @@ public class QualifiedIIdSerializationTest {
     @Override
     public JsonDeserializer<?> findDeserializer(ScoutDataObjectModuleContext moduleContext, JavaType type, DeserializationConfig config, BeanDescription beanDesc) {
       if (type.hasRawClass(FixtureStringId.class) || type.hasRawClass(FixtureUuId.class) || type.hasRawClass(FixtureCompositeId.class) || type.hasRawClass(IId.class)) {
-        return new QualifiedIIdDeserializer(type.getRawClass().asSubclass(IId.class));
+        return new QualifiedIIdDeserializer(moduleContext, type.getRawClass().asSubclass(IId.class));
       }
       return null;
     }
@@ -134,7 +134,7 @@ public class QualifiedIIdSerializationTest {
     @Override
     public JsonSerializer<?> findKeySerializer(ScoutDataObjectModuleContext moduleContext, JavaType type, SerializationConfig config, BeanDescription beanDesc) {
       if (type.hasRawClass(FixtureStringId.class) || type.hasRawClass(FixtureUuId.class) || type.hasRawClass(FixtureCompositeId.class)) {
-        return new QualifiedIIdMapKeySerializer();
+        return new QualifiedIIdMapKeySerializer(moduleContext);
       }
       return null;
     }

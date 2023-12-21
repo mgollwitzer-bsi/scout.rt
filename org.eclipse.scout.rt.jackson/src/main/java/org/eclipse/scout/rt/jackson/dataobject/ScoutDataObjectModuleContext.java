@@ -41,6 +41,8 @@ public class ScoutDataObjectModuleContext {
 
   protected static final String LENIENT_MODE_KEY = "lenientModeKey";
 
+  protected static final String ID_ENCRYPTION_KEY = "idEncryptionKey";
+
   protected LazyValue<DoEntitySerializerAttributeNameComparator> m_comparator = new LazyValue<>(() -> BEANS.get(DoEntitySerializerAttributeNameComparator.class).init(this));
 
   protected final Map<String, Object> m_contextMap = new HashMap<>();
@@ -138,7 +140,16 @@ public class ScoutDataObjectModuleContext {
   }
 
   public ScoutDataObjectModuleContext withLenientMode(boolean lenientMode) {
-    put(LENIENT_MODE_KEY, true);
+    put(LENIENT_MODE_KEY, lenientMode);
+    return this;
+  }
+
+  public boolean isIdEncryption() {
+    return BooleanUtility.nvl(get(ID_ENCRYPTION_KEY, Boolean.class));
+  }
+
+  public ScoutDataObjectModuleContext withIdEncryption(boolean idEncryption) {
+    put(ID_ENCRYPTION_KEY, idEncryption);
     return this;
   }
 }

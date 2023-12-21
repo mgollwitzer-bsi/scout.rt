@@ -16,13 +16,14 @@ import java.lang.annotation.Documented;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.Collection;
 
 /**
  * Annotation used to define the unique type name for an {@link IId} class, used when serializing or deserializing
  * instances.
  *
- * @see IdCodec#toQualified(IId)
- * @see IdCodec#fromQualified(String)
+ * @see IdCodec#toQualified(IId, Collection)
+ * @see IdCodec#fromQualified(String, Collection)
  * @see TypedId
  */
 @Documented

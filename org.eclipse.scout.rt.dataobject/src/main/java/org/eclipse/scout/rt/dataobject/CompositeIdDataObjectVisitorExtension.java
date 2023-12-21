@@ -10,6 +10,7 @@
 package org.eclipse.scout.rt.dataobject;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -50,7 +51,7 @@ public class CompositeIdDataObjectVisitorExtension extends AbstractDataObjectVis
   }
 
   /**
-   * Similar as in {@link IdCodec#toUnqualified(IId)}.
+   * Similar as in {@link IdCodec#toUnqualified(IId, Collection)}.
    */
   protected void unwrap(IId component, List<Object> unwrappedComponents) {
     if (component instanceof IRootId) {

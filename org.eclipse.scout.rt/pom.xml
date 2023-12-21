@@ -79,6 +79,7 @@
     <module>../org.eclipse.scout.rt.jackson.test</module>
     <module>../org.eclipse.scout.rt.rest.jackson</module>
     <module>../org.eclipse.scout.rt.rest.jersey.client</module>
+    <module>../org.eclipse.scout.rt.rest.jersey.server</module>
     <module>../org.eclipse.scout.rt.rest.jersey.test</module>
 
     <module>../org.eclipse.scout.rt.client</module>
@@ -364,6 +365,12 @@
       <dependency>
         <groupId>org.eclipse.scout.rt</groupId>
         <artifactId>org.eclipse.scout.rt.rest.jersey.client</artifactId>
+        <version>24.1-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.eclipse.scout.rt</groupId>
+        <artifactId>org.eclipse.scout.rt.rest.jersey.server</artifactId>
         <version>24.1-SNAPSHOT</version>
       </dependency>
 
