@@ -122,7 +122,10 @@ import org.eclipse.scout.rt.jackson.dataobject.fixture.TestStringHolderPojo;
 import org.eclipse.scout.rt.jackson.dataobject.fixture.TestStringPojo;
 import org.eclipse.scout.rt.jackson.dataobject.fixture.TestSubPojo;
 import org.eclipse.scout.rt.jackson.dataobject.fixture.TestThrowableDo;
+import org.eclipse.scout.rt.jackson.dataobject.fixture.TestTypedUntypedInnerAbsDo;
+import org.eclipse.scout.rt.jackson.dataobject.fixture.TestTypedUntypedInnerDataObjectIfcDo;
 import org.eclipse.scout.rt.jackson.dataobject.fixture.TestTypedUntypedInnerDo;
+import org.eclipse.scout.rt.jackson.dataobject.fixture.TestTypedUntypedInnerIfcDo;
 import org.eclipse.scout.rt.jackson.dataobject.fixture.TestTypedUntypedOuterDo;
 import org.eclipse.scout.rt.jackson.dataobject.fixture.TestVersionedDo;
 import org.eclipse.scout.rt.jackson.dataobject.fixture.TestWithEmptyTypeNameDo;
@@ -3796,6 +3799,65 @@ public class JsonDataObjectsSerializationTest {
     // no DO entity, even lenient data object mapper cannot deal with this
     assertThrows(InvalidTypeIdException.class, () -> s_lenientDataObjectMapper.readValue(json, TestItemPojo2.class));
     assertThrows(InvalidTypeIdException.class, () -> s_lenientDataObjectMapper.readValue("{\"_type\":\"Unknown\"}", TestItemPojo.class));
+  }
+
+  @Test
+  public void testSerializeDeserializeNestedRawDoTypes() throws Exception {
+    String inputJson = readResourceAsString("TestNestedRawDo.json");
+    TestNestedRawDo testDo = s_dataObjectMapper.readValue(inputJson, TestNestedRawDo.class);
+
+    TestNestedRawDo expected = BEANS.get(TestNestedRawDo.class)
+        .withDoEntity(BEANS.get(TestTypedUntypedInnerDo.class)
+            .withIId(FixtureStringId.of("qualified-string-id-0"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-0")))
+        .withIDataObject(BEANS.get(TestTypedUntypedInnerDo.class)
+            .withIId(FixtureStringId.of("qualified-string-id-1"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-1")))
+        .withIDoEntity(BEANS.get(TestTypedUntypedInnerDo.class)
+            .withIId(FixtureStringId.of("qualified-string-id-2"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-2")))
+        .withITestTypedUntypedInner(BEANS.get(TestTypedUntypedInnerIfcDo.class)
+            .withIId(FixtureStringId.of("qualified-string-id-3"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-3"))
+            .withIId2(FixtureStringId.of("qualified-string-id-4"))
+            .withStringId2(FixtureStringId.of("unqualified-string-id-4")))
+        .withAbstractTestTypedUntypedInner(BEANS.get(TestTypedUntypedInnerAbsDo.class)
+            .withIId(FixtureStringId.of("qualified-string-id-5"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-5"))
+            .withIId2(FixtureStringId.of("qualified-string-id-6"))
+            .withStringId2(FixtureStringId.of("unqualified-string-id-6")))
+        .withITestTypedUntypedInnerDataObject(BEANS.get(TestTypedUntypedInnerDataObjectIfcDo.class)
+            .withIId(FixtureStringId.of("qualified-string-id-7"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-7"))
+            .withIId2(FixtureStringId.of("qualified-string-id-8"))
+            .withStringId2(FixtureStringId.of("unqualified-string-id-8")));
+
+    assertEqualsWithComparisonFailure(expected, testDo);
+    String json = s_dataObjectMapper.writeValueAsString(testDo);
+    assertJsonEquals("TestNestedRawDo.json", json);
+  }
+
+  @Test
+  public void testSerializeDeserializeDataObject_DoEntity() throws Exception {
+    IDataObject entity = createTestDo();
+    String json = s_dataObjectMapper.writerFor(IDataObject.class).writeValueAsString(entity);
+    assertJsonEquals("TestComplexEntityDo.json", json);
+
+    IDataObject marshalled = s_dataObjectMapper.readerFor(IDataObject.class).readValue(json);
+    assertEqualsWithComparisonFailure(entity, marshalled);
+  }
+
+  @Test
+  public void testSerializeDeserializeDataObject_DoList() throws Exception {
+    DoList<TestItemDo> list = new DoList<>();
+    list.add(createTestItemDo("id-1", "string-1"));
+    list.add(createTestItemDo("id-2", "string-2"));
+
+    String json = s_dataObjectMapper.writerFor(IDataObject.class).writeValueAsString(list);
+    assertJsonEquals("TestItemDoListIDataObject.json", json);
+
+    IDataObject marshalled = s_dataObjectMapper.readerFor(IDataObject.class).readValue(json);
+    assertEqualsWithComparisonFailure(list, marshalled);
   }
 
   // ------------------------------------ common test helper methods ------------------------------------

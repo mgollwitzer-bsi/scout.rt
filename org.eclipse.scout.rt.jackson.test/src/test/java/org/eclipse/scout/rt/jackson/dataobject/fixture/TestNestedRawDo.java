@@ -32,6 +32,18 @@ public class TestNestedRawDo extends DoEntity {
     return doValue("iDataObject");
   }
 
+  public DoValue<ITestTypedUntypedInnerDo> iTestTypedUntypedInner() {
+    return doValue("iTestTypedUntypedInner");
+  }
+
+  public DoValue<ITestTypedUntypedInnerDataObjectDo> iTestTypedUntypedInnerDataObject() {
+    return doValue("iTestTypedUntypedInnerDataObject");
+  }
+
+  public DoValue<AbstractTestTypedUntypedInnerDo> abstractTestTypedUntypedInner() {
+    return doValue("abstractTestTypedUntypedInner");
+  }
+
   /* **************************************************************************
    * GENERATED CONVENIENCE METHODS
    * *************************************************************************/
@@ -67,5 +79,38 @@ public class TestNestedRawDo extends DoEntity {
   @Generated("DoConvenienceMethodsGenerator")
   public IDataObject getIDataObject() {
     return iDataObject().get();
+  }
+
+  @Generated("DoConvenienceMethodsGenerator")
+  public TestNestedRawDo withITestTypedUntypedInner(ITestTypedUntypedInnerDo iTestTypedUntypedInner) {
+    iTestTypedUntypedInner().set(iTestTypedUntypedInner);
+    return this;
+  }
+
+  @Generated("DoConvenienceMethodsGenerator")
+  public ITestTypedUntypedInnerDo getITestTypedUntypedInner() {
+    return iTestTypedUntypedInner().get();
+  }
+
+  @Generated("DoConvenienceMethodsGenerator")
+  public TestNestedRawDo withITestTypedUntypedInnerDataObject(ITestTypedUntypedInnerDataObjectDo iTestTypedUntypedInnerDataObject) {
+    iTestTypedUntypedInnerDataObject().set(iTestTypedUntypedInnerDataObject);
+    return this;
+  }
+
+  @Generated("DoConvenienceMethodsGenerator")
+  public ITestTypedUntypedInnerDataObjectDo getITestTypedUntypedInnerDataObject() {
+    return iTestTypedUntypedInnerDataObject().get();
+  }
+
+  @Generated("DoConvenienceMethodsGenerator")
+  public TestNestedRawDo withAbstractTestTypedUntypedInner(AbstractTestTypedUntypedInnerDo abstractTestTypedUntypedInner) {
+    abstractTestTypedUntypedInner().set(abstractTestTypedUntypedInner);
+    return this;
+  }
+
+  @Generated("DoConvenienceMethodsGenerator")
+  public AbstractTestTypedUntypedInnerDo getAbstractTestTypedUntypedInner() {
+    return abstractTestTypedUntypedInner().get();
   }
 }
