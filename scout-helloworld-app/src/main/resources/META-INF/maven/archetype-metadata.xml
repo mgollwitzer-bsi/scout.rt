@@ -152,7 +152,23 @@
         </fileSet>
       </fileSets>
     </module>
-    <module id="server.app.war" dir="__rootArtifactId__.server.app.war" name="server.app.war">
+    <module id="server.app" dir="__rootArtifactId__.server.app" name="server.app">
+      <fileSets>
+        <fileSet filtered="true" packaged="true" encoding="UTF-8">
+          <directory>src/main/java</directory>
+          <includes>
+            <include>**/*.java</include>
+          </includes>
+        </fileSet>
+        <fileSet filtered="true" encoding="UTF-8">
+          <directory>src/main/resources</directory>
+          <includes>
+            <include>**/*.xml</include>
+          </includes>
+        </fileSet>
+      </fileSets>
+    </module>
+    <module id="server.app.zip" dir="__rootArtifactId__.server.app.zip" name="server.app.zip">
       <fileSets>
         <fileSet filtered="true" encoding="UTF-8">
           <directory>src/main/resources</directory>
@@ -162,9 +178,16 @@
           </includes>
         </fileSet>
         <fileSet filtered="true" encoding="UTF-8">
-          <directory>src/main/webapp</directory>
+          <directory>src/assembly</directory>
           <includes>
             <include>**/*.xml</include>
+          </includes>
+        </fileSet>
+        <fileSet filtered="true" encoding="UTF-8">
+          <directory>src/main/bin</directory>
+          <includes>
+            <include>**/*.cmd</include>
+            <include>**/*.sh</include>
           </includes>
         </fileSet>
       </fileSets>
@@ -176,12 +199,6 @@
           <includes>
             <include>**/*.xml</include>
             <include>**/*.properties</include>
-          </includes>
-        </fileSet>
-        <fileSet filtered="true" encoding="UTF-8">
-          <directory>src/main/webapp</directory>
-          <includes>
-            <include>**/*.xml</include>
           </includes>
         </fileSet>
       </fileSets>
@@ -229,7 +246,23 @@
         </fileSet>
       </fileSets>
     </module>
-    <module id="ui.html.app.war" dir="__rootArtifactId__.ui.html.app.war" name="ui.html.app.war">
+    <module id="ui.html.app" dir="__rootArtifactId__.ui.html.app" name="ui.html.app">
+      <fileSets>
+        <fileSet filtered="true" packaged="true" encoding="UTF-8">
+          <directory>src/main/java</directory>
+          <includes>
+            <include>**/*.java</include>
+          </includes>
+        </fileSet>
+        <fileSet filtered="true" encoding="UTF-8">
+          <directory>src/main/resources</directory>
+          <includes>
+            <include>**/*.xml</include>
+          </includes>
+        </fileSet>
+      </fileSets>
+    </module>
+    <module id="ui.html.app.zip" dir="__rootArtifactId__.ui.html.app.zip" name="ui.html.app.zip">
       <fileSets>
         <fileSet filtered="true" encoding="UTF-8">
           <directory>src/main/resources</directory>
@@ -239,9 +272,16 @@
           </includes>
         </fileSet>
         <fileSet filtered="true" encoding="UTF-8">
-          <directory>src/main/webapp</directory>
+          <directory>src/assembly</directory>
           <includes>
             <include>**/*.xml</include>
+          </includes>
+        </fileSet>
+        <fileSet filtered="true" encoding="UTF-8">
+          <directory>src/main/bin</directory>
+          <includes>
+            <include>**/*.cmd</include>
+            <include>**/*.sh</include>
           </includes>
         </fileSet>
       </fileSets>
@@ -253,12 +293,6 @@
           <includes>
             <include>**/*.xml</include>
             <include>**/*.properties</include>
-          </includes>
-        </fileSet>
-        <fileSet filtered="true" encoding="UTF-8">
-          <directory>src/main/webapp</directory>
-          <includes>
-            <include>**/*.xml</include>
           </includes>
         </fileSet>
         <fileSet encoding="UTF-8">

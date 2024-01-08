@@ -82,6 +82,12 @@
             <include>**/*.less</include>
           </includes>
         </fileSet>
+        <fileSet filtered="true" packaged="true" encoding="UTF-8">
+          <directory>src/main/java</directory>
+          <includes>
+            <include>**/*.java</include>
+          </includes>
+        </fileSet>
         <fileSet filtered="true" encoding="UTF-8">
           <directory>src/main/resources</directory>
           <includes>
@@ -110,16 +116,9 @@
             <include>**/*.xml</include>
           </includes>
         </fileSet>
-        <fileSet filtered="true" encoding="UTF-8">
-          <directory>src/main/webapp</directory>
-          <includes>
-            <include>**/*.xml</include>
-            <include>**/*.html</include>
-          </includes>
-        </fileSet>
       </fileSets>
     </module>
-    <module id="app.war" dir="__rootArtifactId__.app.war" name="app.war">
+    <module id="app.zip" dir="__rootArtifactId__.app.zip" name="app.zip">
       <fileSets>
         <fileSet filtered="true" encoding="UTF-8">
           <directory>src/main/resources</directory>
@@ -129,10 +128,16 @@
           </includes>
         </fileSet>
         <fileSet filtered="true" encoding="UTF-8">
-          <directory>src/main/webapp</directory>
+          <directory>src/assembly</directory>
           <includes>
             <include>**/*.xml</include>
-            <include>**/*.html</include>
+          </includes>
+        </fileSet>
+        <fileSet filtered="true" encoding="UTF-8">
+          <directory>src/main/bin</directory>
+          <includes>
+            <include>**/*.cmd</include>
+            <include>**/*.sh</include>
           </includes>
         </fileSet>
       </fileSets>

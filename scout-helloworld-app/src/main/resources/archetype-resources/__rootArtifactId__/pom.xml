@@ -23,11 +23,13 @@
     <module>../${rootArtifactId}.shared</module>
     <module>../${rootArtifactId}.server</module>
     <module>../${rootArtifactId}.client</module>
-    <module>../${rootArtifactId}.server.app.war</module>
+    <module>../${rootArtifactId}.server.app</module>
     <module>../${rootArtifactId}.server.app.dev</module>
+    <module>../${rootArtifactId}.server.app.zip</module>
     <module>../${rootArtifactId}.ui.html</module>
-    <module>../${rootArtifactId}.ui.html.app.war</module>
+    <module>../${rootArtifactId}.ui.html.app</module>
     <module>../${rootArtifactId}.ui.html.app.dev</module>
+    <module>../${rootArtifactId}.ui.html.app.zip</module>
   </modules>
 
   <dependencyManagement>
@@ -59,7 +61,37 @@
       </dependency>
       <dependency>
         <groupId>${groupId}</groupId>
+        <artifactId>${rootArtifactId}.server.app</artifactId>
+        <version>${${groupId}.${rootArtifactId}.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${groupId}</groupId>
+        <artifactId>${rootArtifactId}.server.app.dev</artifactId>
+        <version>${${groupId}.${rootArtifactId}.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${groupId}</groupId>
+        <artifactId>${rootArtifactId}.server.app.zip</artifactId>
+        <version>${${groupId}.${rootArtifactId}.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${groupId}</groupId>
         <artifactId>${rootArtifactId}.ui.html</artifactId>
+        <version>${${groupId}.${rootArtifactId}.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${groupId}</groupId>
+        <artifactId>${rootArtifactId}.ui.html.app</artifactId>
+        <version>${${groupId}.${rootArtifactId}.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${groupId}</groupId>
+        <artifactId>${rootArtifactId}.ui.html.app.dev</artifactId>
+        <version>${${groupId}.${rootArtifactId}.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${groupId}</groupId>
+        <artifactId>${rootArtifactId}.ui.html.app.zip</artifactId>
         <version>${${groupId}.${rootArtifactId}.version}</version>
       </dependency>
     </dependencies>
