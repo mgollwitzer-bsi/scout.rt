@@ -3806,41 +3806,66 @@ public class JsonDataObjectsSerializationTest {
     String inputJson = readResourceAsString("TestNestedRawDo.json");
     TestNestedRawDo testDo = s_dataObjectMapper.readValue(inputJson, TestNestedRawDo.class);
 
+    DoEntity entity2 = BEANS.get(DoEntity.class);
+    // NOTE: This test-case is not a supposed real-world example. An IId as part of an untyped DoEntity is serialized unqualified and may never be deserialized correctly.
+    entity2.put("iId", FixtureStringId.of("unqualified-string-id-0"));
+    entity2.put("stringId", FixtureStringId.of("unqualified-string-id-0"));
+
     TestNestedRawDo expected = BEANS.get(TestNestedRawDo.class)
         .withDoEntity(BEANS.get(TestTypedUntypedInnerDo.class)
-            .withIId(FixtureStringId.of("qualified-string-id-0"))
-            .withStringId(FixtureStringId.of("unqualified-string-id-0")))
-        .withIDataObject(BEANS.get(TestTypedUntypedInnerDo.class)
             .withIId(FixtureStringId.of("qualified-string-id-1"))
             .withStringId(FixtureStringId.of("unqualified-string-id-1")))
-        .withIDoEntity(BEANS.get(TestTypedUntypedInnerDo.class)
+        .withDoEntity2(entity2)
+        .withIDataObject(BEANS.get(TestTypedUntypedInnerDo.class)
             .withIId(FixtureStringId.of("qualified-string-id-2"))
             .withStringId(FixtureStringId.of("unqualified-string-id-2")))
+        .withIDataObject2(DoList.of(
+            // NOTE: This test-case is not a supposed real-world example. An IId as part of an untyped DoList is serialized unqualified and may never be deserialized correctly.
+            List.of(FixtureStringId.of("unqualified-string-id-3"),
+                FixtureStringId.of("unqualified-string-id-3"))))
+        .withIDoEntity(BEANS.get(TestTypedUntypedInnerDo.class)
+            .withIId(FixtureStringId.of("qualified-string-id-4"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-4")))
+        .withIDoEntity2(BEANS.get(DoEntityBuilder.class)
+            // NOTE: This test-case is not a supposed real-world example. An IId as part of an untyped IDoEntity is serialized unqualified and may never be deserialized correctly.
+            .put("iId", FixtureStringId.of("unqualified-string-id-5"))
+            .put("stringId", FixtureStringId.of("unqualified-string-id-5")).build())
         .withITestTypedUntypedInner(BEANS.get(TestTypedUntypedInnerIfcDo.class)
-            .withIId(FixtureStringId.of("qualified-string-id-3"))
-            .withStringId(FixtureStringId.of("unqualified-string-id-3"))
-            .withIId2(FixtureStringId.of("qualified-string-id-4"))
-            .withStringId2(FixtureStringId.of("unqualified-string-id-4")))
+            .withIId(FixtureStringId.of("qualified-string-id-6"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-6"))
+            .withIId2(FixtureStringId.of("qualified-string-id-7"))
+            .withStringId2(FixtureStringId.of("unqualified-string-id-7")))
         .withAbstractTestTypedUntypedInner(BEANS.get(TestTypedUntypedInnerAbsDo.class)
-            .withIId(FixtureStringId.of("qualified-string-id-5"))
-            .withStringId(FixtureStringId.of("unqualified-string-id-5"))
-            .withIId2(FixtureStringId.of("qualified-string-id-6"))
-            .withStringId2(FixtureStringId.of("unqualified-string-id-6")))
+            .withIId(FixtureStringId.of("qualified-string-id-8"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-8"))
+            .withIId2(FixtureStringId.of("qualified-string-id-9"))
+            .withStringId2(FixtureStringId.of("unqualified-string-id-9")))
         .withITestTypedUntypedInnerDataObject(BEANS.get(TestTypedUntypedInnerDataObjectIfcDo.class)
-            .withIId(FixtureStringId.of("qualified-string-id-7"))
-            .withStringId(FixtureStringId.of("unqualified-string-id-7"))
-            .withIId2(FixtureStringId.of("qualified-string-id-8"))
-            .withStringId2(FixtureStringId.of("unqualified-string-id-8")));
+            .withIId(FixtureStringId.of("qualified-string-id-10"))
+            .withStringId(FixtureStringId.of("unqualified-string-id-10"))
+            .withIId2(FixtureStringId.of("qualified-string-id-11"))
+            .withStringId2(FixtureStringId.of("unqualified-string-id-11")));
 
-    assertEqualsWithComparisonFailure(expected, testDo);
+    // assert JSON-equality
     String json = s_dataObjectMapper.writeValueAsString(testDo);
     assertJsonEquals("TestNestedRawDo.json", json);
+    json = s_dataObjectMapper.writeValueAsString(expected);
+    assertJsonEquals("TestNestedRawDo.json", json);
+
+    // assert partial Java-equality, excluding untyped attributes, see NOTE above)
+    expected.remove(expected::doEntity2);
+    expected.remove(expected::iDataObject2);
+    expected.remove(expected::iDoEntity2);
+    testDo.remove(testDo::doEntity2);
+    testDo.remove(testDo::iDataObject2);
+    testDo.remove(testDo::iDoEntity2);
+    assertEqualsWithComparisonFailure(expected, testDo);
   }
 
   @Test
   public void testSerializeDeserializeDataObject_DoEntity() throws Exception {
     IDataObject entity = createTestDo();
-    String json = s_dataObjectMapper.writerFor(IDataObject.class).writeValueAsString(entity);
+    String json = s_dataObjectMapper.writerFor(IDoEntity.class).writeValueAsString(entity);
     assertJsonEquals("TestComplexEntityDo.json", json);
 
     IDataObject marshalled = s_dataObjectMapper.readerFor(IDataObject.class).readValue(json);
@@ -3853,7 +3878,7 @@ public class JsonDataObjectsSerializationTest {
     list.add(createTestItemDo("id-1", "string-1"));
     list.add(createTestItemDo("id-2", "string-2"));
 
-    String json = s_dataObjectMapper.writerFor(IDataObject.class).writeValueAsString(list);
+    String json = s_dataObjectMapper.writerFor(DoList.class).writeValueAsString(list);
     assertJsonEquals("TestItemDoListIDataObject.json", json);
 
     IDataObject marshalled = s_dataObjectMapper.readerFor(IDataObject.class).readValue(json);

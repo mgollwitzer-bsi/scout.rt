@@ -64,9 +64,6 @@ public class ScoutDataObjectSerializerProvider implements IDataObjectSerializerP
     else if (ObjectUtility.isOneOf(rawClass, DoList.class, DoSet.class, DoCollection.class)) {
       return new DoCollectionSerializer<>(moduleContext, type);
     }
-    else if (IDataObject.class.isAssignableFrom(rawClass)) {
-      return new DataObjectSerializer(moduleContext, type);
-    }
     else if (Date.class.isAssignableFrom(rawClass)) {
       return new DoDateSerializer();
     }
